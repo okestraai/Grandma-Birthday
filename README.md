@@ -143,7 +143,7 @@ The important ones:
 
 The web app needs no variables in development. For production builds, `VITE_SITE_URL` sets the site address used in canonical links, and `VITE_API_URL` is only needed if the API is on a different origin.
 
-In production the API refuses to start if the secrets still have their example values, if `COOKIE_SECURE` is not `true`, if `CORS_ORIGIN` is `*`, or if the storage connection string points at the local emulator.
+In production the API refuses to start if the secrets still have their example values or `docker-compose.yml`'s local fallbacks, if `COOKIE_SECURE` is not `true`, if `CORS_ORIGIN` is `*`, or if the storage connection string points at the local emulator.
 
 ---
 
@@ -373,14 +373,113 @@ The site is a single-page React app, but search engines and link previews still 
 
 ## Deployment
 
-See **[docs/deployment.md](docs/deployment.md)** for step-by-step guides:
+This section is the short path to a live site. [docs/deployment.md](docs/deployment.md) has the details for each provider.
 
-- **Web:** the included Node server (recommended), Vercel, Netlify, Cloudflare Pages or any static host
-- **API:** Docker on Azure Container Apps or App Service, Railway, Render, Fly.io or AWS
-- **Database:** Azure Database for PostgreSQL, Neon, Supabase, Railway or AWS RDS
-- **Storage:** Azure Blob Storage
+### What you need
 
-The application has no provider-specific code: everything is set through environment variables.
+- **A domain with HTTPS.** Login cookies and the check-in camera need HTTPS.
+- **PostgreSQL 14 or newer.** For example Azure Database for PostgreSQL, Neon, Supabase or Railway.
+- **An Azure Storage account** with a **private** container for photos and videos.
+- **An SMTP account** for email. For example SendGrid, Mailgun, Postmark or Amazon SES.
+- **Somewhere to run two containers**: the API and the web server. For example Azure Container Apps, Railway, Render or Fly.io.
+
+### Steps
+
+**1. Create the database and the storage container.** Copy the database connection string and the storage connection string. Set the container's access level to **Private**.
+
+**2. Generate two secrets.** Run this twice and keep both values:
+
+```bash
+openssl rand -base64 48
+```
+
+**3. Build the two images** from the repository root:
+
+```bash
+docker build -f apps/api/Dockerfile -t birthday-api .
+docker build -f apps/web/Dockerfile --build-arg VITE_SITE_URL=https://your-domain -t birthday-web .
+```
+
+**4. Set the API's environment variables.** These are the ones every deployment needs. [`.env.example`](.env.example) lists the rest.
+
+```
+NODE_ENV=production
+DATABASE_URL=postgresql://...
+JWT_SECRET=<first secret from step 2>
+JWT_REFRESH_SECRET=<second secret from step 2>
+AZURE_STORAGE_CONNECTION_STRING=DefaultEndpointsProtocol=https;AccountName=...;AccountKey=...;EndpointSuffix=core.windows.net
+AZURE_STORAGE_CONTAINER=birthday-media
+PUBLIC_WEB_URL=https://your-domain
+CORS_ORIGIN=https://your-domain
+COOKIE_SECURE=true
+TRUST_PROXY=1
+SMTP_HOST=...
+SMTP_PORT=587
+SMTP_USER=...
+SMTP_PASSWORD=...
+SMTP_FROM="Margaret's 70th <celebration@your-domain>"
+```
+
+Keep these in your host's secret settings, never in the repository.
+
+**5. Apply the database migrations.** Run this once with the API image and the same variables, and again after every update:
+
+```bash
+npx prisma migrate deploy
+```
+
+**6. Create the first admin.** Add `SEED_ADMIN_EMAIL` and `SEED_ADMIN_PASSWORD` to the API's variables and run this once with the API image:
+
+```bash
+node dist/seed/run-seed.js
+```
+
+Then remove both variables. Do not set `SEED_DEMO=true` on a live site: the demo password is public in this repository, so the seed refuses it in production.
+
+**7. Start the API.** It listens on port 4100. Use `GET /api/health/ready` as the health check.
+
+**8. Start the web server** with these variables:
+
+```
+PORT=8080
+API_ORIGIN=http://<where the web server can reach the API>:4100
+PUBLIC_WEB_URL=https://your-domain
+SNAPSHOT_DIR=/var/lib/birthday-web
+```
+
+The web server forwards `/api` to the API, so visitors only ever use your domain. `SNAPSHOT_DIR` keeps a saved copy of the public pages for when the API is down. Put it on a persistent volume if your host offers one.
+
+**9. Point your domain at the web server** and turn on HTTPS. Only the web server needs to be public. The API can stay private.
+
+**10. Check it works.**
+
+- Open `https://your-domain/api/health/ready`. It should show `{"status":"ok","database":"up","storage":"up"}`.
+- Sign in at `https://your-domain/admin/login`. Fill in the event, the celebrant and the content, and set the storage quota in Settings.
+- Send yourself an RSVP. Check that the confirmation email arrives and the invitation's QR code opens.
+- Upload a photo from the guest upload page, then approve it in the admin.
+
+### Safety checks
+
+The API refuses to start in production if:
+
+- either JWT secret is the example value, the Docker fallback, or shorter than 32 characters
+- both JWT secrets are the same
+- `COOKIE_SECURE` is not `true`, or `CORS_ORIGIN` is `*`
+- the storage connection string points at the local emulator (Azurite)
+
+It prints every problem at once, so you can fix them in one go.
+
+### Updating the site
+
+1. Pull the latest code and build both images again.
+2. Run `npx prisma migrate deploy` with the new API image **before** starting the new API.
+3. Restart the API, then the web server.
+
+Visitors who have the site open see "A new version of the site is ready". They move to the new version on their next page change. If you put a CDN in front of the site, make sure it does not cache `/version.json`.
+
+### Backups
+
+Turn on your database provider's automatic backups. On the storage account, turn on **soft delete for blobs**, so a deleted photo can be recovered.
 
 ---
 

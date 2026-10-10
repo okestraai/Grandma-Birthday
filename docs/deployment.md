@@ -33,7 +33,7 @@ Put the web server and the API behind the same domain (for example `celebration.
 - [ ] Create the first admin: set `SEED_ADMIN_EMAIL` and `SEED_ADMIN_PASSWORD`, run the seed once with `SEED_DEMO=false`, then remove both variables
 - [ ] Sign in, fill in the event, celebrant and content, and set the storage quota
 
-The API refuses to start if the secrets are the example values, `COOKIE_SECURE` is not `true`, `CORS_ORIGIN` is `*`, or storage points at the local emulator.
+The API refuses to start if the secrets are the example values or `docker-compose.yml`'s local fallbacks, `COOKIE_SECURE` is not `true`, `CORS_ORIGIN` is `*`, or storage points at the local emulator. The seed refuses `SEED_DEMO=true` in production, because the demo password is public in the repository.
 
 ---
 
