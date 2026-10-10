@@ -1,0 +1,269 @@
+@import 'tailwindcss';
+
+/*
+ * Design tokens. Brand colours are CSS variables so the admin "Branding" settings
+ * can change them at runtime (see src/lib/branding.ts). Everything else derives from them.
+ */
+:root {
+  --brand-navy: #071a2b;
+  --brand-emerald-deep: #0b3d35;
+  --brand-emerald: #12665a;
+  --brand-gold: #d6b36a;
+  --brand-gold-rich: #b88a35;
+  --brand-champagne: #f1e3c0;
+  --brand-ivory: #faf7f0;
+  --brand-cream: #f4efe5;
+  --brand-charcoal: #1b1b1b;
+  --brand-muted: #6f6a61;
+  --brand-success: #2f8f6b;
+  --brand-warning: #c98a28;
+  --brand-error: #b94a48;
+
+  --gradient-luxury: linear-gradient(135deg, #071a2b 0%, #0b3d35 50%, #12665a 100%);
+  --gradient-gold: linear-gradient(135deg, #b88a35 0%, #d6b36a 45%, #f1e3c0 100%);
+  --gradient-hero: linear-gradient(
+    135deg,
+    rgba(7, 26, 43, 0.97),
+    rgba(11, 61, 53, 0.92),
+    rgba(7, 26, 43, 0.85)
+  );
+
+  --shadow-soft: 0 1px 2px rgba(7, 26, 43, 0.04), 0 8px 24px -12px rgba(7, 26, 43, 0.18);
+  --shadow-lift: 0 2px 4px rgba(7, 26, 43, 0.06), 0 18px 40px -16px rgba(7, 26, 43, 0.3);
+  --shadow-gold: 0 0 0 1px rgba(214, 179, 106, 0.55), 0 12px 32px -14px rgba(184, 138, 53, 0.45);
+}
+
+@theme inline {
+  --color-navy: var(--brand-navy);
+  --color-emerald-deep: var(--brand-emerald-deep);
+  --color-emerald: var(--brand-emerald);
+  --color-gold: var(--brand-gold);
+  --color-gold-rich: var(--brand-gold-rich);
+  --color-champagne: var(--brand-champagne);
+  --color-ivory: var(--brand-ivory);
+  --color-cream: var(--brand-cream);
+  --color-charcoal: var(--brand-charcoal);
+  --color-muted: var(--brand-muted);
+  --color-success: var(--brand-success);
+  --color-warning: var(--brand-warning);
+  --color-error: var(--brand-error);
+
+  --font-display: 'Playfair Display Variable', 'Playfair Display', Georgia, serif;
+  --font-sans: 'Inter Variable', Inter, ui-sans-serif, system-ui, sans-serif;
+
+  --shadow-soft: var(--shadow-soft);
+  --shadow-lift: var(--shadow-lift);
+  --shadow-gold: var(--shadow-gold);
+
+  --ease-luxe: cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+@utility bg-luxury {
+  background-image: var(--gradient-luxury);
+}
+@utility bg-gold {
+  background-image: var(--gradient-gold);
+}
+@utility bg-hero {
+  background-image: var(--gradient-hero);
+}
+/* Gold gradient text for the "70" motif and accents. */
+@utility text-gold-gradient {
+  background-image: var(--gradient-gold);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+@utility container-page {
+  width: 100%;
+  max-width: 76rem;
+  margin-inline: auto;
+  padding-inline: 1rem;
+  @media (width >= 40rem) {
+    padding-inline: 1.5rem;
+  }
+  @media (width >= 64rem) {
+    padding-inline: 2rem;
+  }
+}
+
+@layer base {
+  html {
+    -webkit-text-size-adjust: 100%;
+    text-rendering: optimizeLegibility;
+  }
+  body {
+    background-color: var(--brand-ivory);
+    color: var(--brand-charcoal);
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+  }
+  h1,
+  h2,
+  h3 {
+    text-wrap: balance;
+  }
+  :focus-visible {
+    outline: 2px solid var(--brand-gold-rich);
+    outline-offset: 2px;
+  }
+  ::selection {
+    background: var(--brand-champagne);
+    color: var(--brand-navy);
+  }
+}
+
+/* Gold shimmer used by primary buttons on hover. */
+@keyframes shimmer {
+  from {
+    transform: translateX(-120%) skewX(-20deg);
+  }
+  to {
+    transform: translateX(220%) skewX(-20deg);
+  }
+}
+
+/* Gold motes (Sparkles and the hero "70"). Only transform and opacity animate, so the compositor
+   runs them. Each mote sets its own path and timing in --mote-* custom properties. The glow is a
+   radial gradient inside the box rather than a box-shadow. */
+.mote {
+  position: absolute;
+  opacity: 0;
+  animation: mote-rise var(--mote-duration, 8s) linear var(--mote-delay, 0s) infinite both;
+}
+.mote-dot {
+  border-radius: 9999px;
+  background: radial-gradient(
+    circle closest-side,
+    #f1e3c0 0 20%,
+    rgb(241 227 192 / 0.5) 38%,
+    rgb(241 227 192 / 0) 100%
+  );
+}
+.mote-star {
+  color: var(--brand-champagne);
+  line-height: 1;
+}
+.mote-float {
+  animation-name: mote-float;
+  animation-timing-function: ease-in-out;
+}
+/* Rises quickly then slows (the keyframe spacing gives the ease-out). */
+@keyframes mote-rise {
+  0% {
+    opacity: 0;
+    transform: translate3d(0, 0, 0) scale(0.4) rotate(0deg);
+  }
+  33% {
+    opacity: 1;
+    transform: translate3d(calc(var(--mote-drift, 0px) * 0.55), calc(var(--mote-rise, 80px) * -0.55), 0) scale(1)
+      rotate(calc(var(--mote-turn, 0deg) * 0.55));
+  }
+  67% {
+    opacity: 0.8;
+    transform: translate3d(calc(var(--mote-drift, 0px) * 0.89), calc(var(--mote-rise, 80px) * -0.89), 0) scale(0.8)
+      rotate(calc(var(--mote-turn, 0deg) * 0.89));
+  }
+  100% {
+    opacity: 0;
+    transform: translate3d(var(--mote-drift, 0px), calc(var(--mote-rise, 80px) * -1), 0) scale(0.3) rotate(var(--mote-turn, 0deg));
+  }
+}
+@keyframes mote-float {
+  0% {
+    opacity: 0;
+    transform: translate3d(0, -4px, 0);
+  }
+  50% {
+    opacity: 0.9;
+  }
+  100% {
+    opacity: 0;
+    transform: translate3d(0, -34px, 0);
+  }
+}
+
+/* Small looping accents in the hero (RSVP shimmer, portrait ring, scroll arrow, "70" float). */
+.loop-shimmer {
+  animation: loop-shimmer 4.6s ease-in-out 2s infinite both;
+}
+.loop-pulse {
+  animation: loop-pulse 5s ease-in-out infinite;
+}
+.loop-nudge {
+  animation: loop-nudge 2.4s ease-in-out infinite;
+}
+.loop-float {
+  animation: loop-float 9s ease-in-out 1.6s infinite;
+}
+@keyframes loop-shimmer {
+  0% {
+    transform: translateX(-120%) skewX(-20deg);
+  }
+  30%,
+  100% {
+    transform: translateX(360%) skewX(-20deg);
+  }
+}
+@keyframes loop-pulse {
+  0%,
+  100% {
+    opacity: 0.6;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+@keyframes loop-nudge {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(6px);
+  }
+}
+@keyframes loop-float {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-10px);
+  }
+}
+
+/* Loops stop while their section is off screen (set by useOnScreen). */
+[data-paused] :is(.mote, .loop-shimmer, .loop-pulse, .loop-nudge, .loop-float) {
+  animation-play-state: paused;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .mote,
+  .loop-shimmer,
+  .loop-pulse,
+  .loop-nudge,
+  .loop-float {
+    animation: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+@media print {
+  .no-print {
+    display: none !important;
+  }
+  body {
+    background: #fff;
+  }
+}

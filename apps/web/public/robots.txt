@@ -1,0 +1,12 @@
+# Robots rules for the celebration site.
+# Private pages (admin, personal invitations, the event-night upload page) are not for search engines.
+User-agent: *
+Allow: /
+Disallow: /admin
+Disallow: /invitation/
+Disallow: /memories/upload/
+Disallow: /api/
+
+# The Sitemap directive must be an absolute URL. The production web server (server/index.mjs)
+# replaces __SITE_URL__ with the configured public origin (SITE_URL) when it serves this file.
+Sitemap: __SITE_URL__/sitemap.xml

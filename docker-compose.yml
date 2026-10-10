@@ -1,0 +1,132 @@
+# Local development, and a way to try the whole platform on one machine.
+#   Infrastructure only:  docker compose up -d postgres azurite mailpit
+#   Everything:           docker compose --profile app up -d --build
+#   Demo data:            docker compose --profile seed run --rm seed
+#
+# The "app" profile runs in development mode with local-only secrets and Azurite.
+# For a real deployment set NODE_ENV=production, real JWT secrets, COOKIE_SECURE=true and
+# an Azure Storage connection string (the API refuses to start in production otherwise).
+name: birthday-platform
+
+services:
+  postgres:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-birthday}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-birthday}
+      POSTGRES_DB: ${POSTGRES_DB:-birthday}
+    ports:
+      - "127.0.0.1:${POSTGRES_HOST_PORT:-5437}:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+      - ./docker/postgres-init.sql:/docker-entrypoint-initdb.d/10-test-db.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  # Azure Blob Storage emulator for local development.
+  azurite:
+    image: mcr.microsoft.com/azure-storage/azurite:latest
+    command: ["azurite-blob", "--blobHost", "0.0.0.0", "--blobPort", "10000", "--location", "/data", "--skipApiVersionCheck"]
+    ports:
+      - "127.0.0.1:${AZURITE_HOST_PORT:-10100}:10000"
+    volumes:
+      - azurite-data:/data
+
+  # Catches every email in development. Web UI on http://localhost:8125
+  mailpit:
+    image: axllent/mailpit:latest
+    ports:
+      - "127.0.0.1:${MAILPIT_SMTP_HOST_PORT:-1125}:1025"
+      - "127.0.0.1:${MAILPIT_UI_HOST_PORT:-8125}:8025"
+
+  migrate:
+    profiles: ["app"]
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+    command: ["npx", "prisma", "migrate", "deploy"]
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-birthday}:${POSTGRES_PASSWORD:-birthday}@postgres:5432/${POSTGRES_DB:-birthday}
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  api:
+    profiles: ["app"]
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+    env_file:
+      - path: .env
+        required: false
+    environment:
+      NODE_ENV: ${NODE_ENV:-development}
+      JWT_SECRET: ${JWT_SECRET:-local-docker-access-secret-not-for-production}
+      JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET:-local-docker-refresh-secret-not-for-production}
+      PORT: 4100
+      DATABASE_URL: postgresql://${POSTGRES_USER:-birthday}:${POSTGRES_PASSWORD:-birthday}@postgres:5432/${POSTGRES_DB:-birthday}
+      AZURE_STORAGE_CONNECTION_STRING: ${AZURE_STORAGE_CONNECTION_STRING_DOCKER:-DefaultEndpointsProtocol=http;AccountName=devstoreaccount1;AccountKey=Eby8vdM02xNOcqFlqUwJPLlmEtlCDXJ1OUzFT50uSRZ6IFsuFq2UVErCz4I6tq/K1SZFPTOtr/KBHBeksoGMGw==;BlobEndpoint=http://azurite:10000/devstoreaccount1;}
+      AZURE_STORAGE_CONTAINER: ${AZURE_STORAGE_CONTAINER:-birthday-media}
+      SMTP_HOST: mailpit
+      SMTP_PORT: 1025
+      PUBLIC_WEB_URL: ${PUBLIC_WEB_URL:-http://localhost:8080}
+      CORS_ORIGIN: ${CORS_ORIGIN:-http://localhost:8080}
+      COOKIE_SECURE: ${COOKIE_SECURE:-false}
+      TRUST_PROXY: "1"
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+      azurite:
+        condition: service_started
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:4100/api/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 10s
+      timeout: 3s
+      retries: 10
+    init: true
+
+  # Seeds demo content: docker compose --profile app run --rm seed
+  seed:
+    profiles: ["seed"]
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+    command: ["node", "dist/seed/run-seed.js"]
+    environment:
+      NODE_ENV: ${NODE_ENV:-development}
+      JWT_SECRET: ${JWT_SECRET:-local-docker-access-secret-not-for-production}
+      JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET:-local-docker-refresh-secret-not-for-production}
+      DATABASE_URL: postgresql://${POSTGRES_USER:-birthday}:${POSTGRES_PASSWORD:-birthday}@postgres:5432/${POSTGRES_DB:-birthday}
+      AZURE_STORAGE_CONNECTION_STRING: ${AZURE_STORAGE_CONNECTION_STRING_DOCKER:-DefaultEndpointsProtocol=http;AccountName=devstoreaccount1;AccountKey=Eby8vdM02xNOcqFlqUwJPLlmEtlCDXJ1OUzFT50uSRZ6IFsuFq2UVErCz4I6tq/K1SZFPTOtr/KBHBeksoGMGw==;BlobEndpoint=http://azurite:10000/devstoreaccount1;}
+      AZURE_STORAGE_CONTAINER: ${AZURE_STORAGE_CONTAINER:-birthday-media}
+      SEED_DEMO: "true"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      azurite:
+        condition: service_started
+
+  web:
+    profiles: ["app"]
+    build:
+      context: .
+      dockerfile: apps/web/Dockerfile
+      args:
+        VITE_SITE_URL: ${PUBLIC_WEB_URL:-http://localhost:8080}
+    environment:
+      PORT: 8080
+      API_ORIGIN: http://api:4100
+      PUBLIC_WEB_URL: ${PUBLIC_WEB_URL:-http://localhost:8080}
+    ports:
+      - "${WEB_HOST_PORT:-8080}:8080"
+    depends_on:
+      api:
+        condition: service_healthy
+    init: true
+
+volumes:
+  postgres-data:
+  azurite-data:

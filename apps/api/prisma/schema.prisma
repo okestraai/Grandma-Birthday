@@ -1,0 +1,623 @@
+// Database schema for the 70th birthday celebration platform.
+// Large files live in Azure Blob Storage; this database stores metadata only.
+
+generator client {
+  provider     = "prisma-client"
+  output       = "../src/generated/prisma"
+  moduleFormat = "cjs"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ---------------------------------------------------------------------------
+// Users, sessions and audit
+// ---------------------------------------------------------------------------
+
+enum UserRole {
+  SUPER_ADMIN
+  ADMIN
+  CHECK_IN_STAFF
+}
+
+enum UserStatus {
+  ACTIVE
+  DISABLED
+}
+
+model User {
+  id                 String     @id @default(uuid()) @db.Uuid
+  email              String     @unique
+  name               String
+  passwordHash       String     @map("password_hash")
+  role               UserRole
+  status             UserStatus @default(ACTIVE)
+  failedLoginCount   Int        @default(0) @map("failed_login_count")
+  lockedUntil        DateTime?  @map("locked_until") @db.Timestamptz(3)
+  lastLoginAt        DateTime?  @map("last_login_at") @db.Timestamptz(3)
+  passwordChangedAt  DateTime?  @map("password_changed_at") @db.Timestamptz(3)
+  createdAt          DateTime   @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt          DateTime   @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  refreshTokens       RefreshToken[]
+  passwordResetTokens PasswordResetToken[]
+  auditLogs           AuditLog[]
+  checkIns            CheckIn[]            @relation("CheckedInBy")
+  reversedCheckIns    CheckIn[]            @relation("ReversedBy")
+  uploadedMedia       Media[]              @relation("UploadedBy")
+  reviewedMedia       Media[]              @relation("ReviewedBy")
+  reviewedTestimonials Testimonial[]       @relation("TestimonialReviewedBy")
+
+  @@index([role])
+  @@index([createdAt])
+  @@map("users")
+}
+
+// Refresh tokens are stored as SHA-256 hashes. Each login starts a family;
+// every refresh rotates the token. Reusing a rotated token revokes the family.
+model RefreshToken {
+  id           String    @id @default(uuid()) @db.Uuid
+  userId       String    @map("user_id") @db.Uuid
+  tokenHash    String    @unique @map("token_hash")
+  familyId     String    @map("family_id") @db.Uuid
+  expiresAt    DateTime  @map("expires_at") @db.Timestamptz(3)
+  revokedAt    DateTime? @map("revoked_at") @db.Timestamptz(3)
+  replacedById String?   @map("replaced_by_id") @db.Uuid
+  userAgent    String?   @map("user_agent")
+  ip           String?
+  createdAt    DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([familyId])
+  @@map("refresh_tokens")
+}
+
+model PasswordResetToken {
+  id        String    @id @default(uuid()) @db.Uuid
+  userId    String    @map("user_id") @db.Uuid
+  tokenHash String    @unique @map("token_hash")
+  expiresAt DateTime  @map("expires_at") @db.Timestamptz(3)
+  usedAt    DateTime? @map("used_at") @db.Timestamptz(3)
+  createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("password_reset_tokens")
+}
+
+model AuditLog {
+  id         String   @id @default(uuid()) @db.Uuid
+  actorId    String?  @map("actor_id") @db.Uuid
+  actorEmail String?  @map("actor_email")
+  action     String
+  entityType String   @map("entity_type")
+  entityId   String?  @map("entity_id")
+  ip         String?
+  userAgent  String?  @map("user_agent")
+  metadata   Json?
+  createdAt  DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  actor User? @relation(fields: [actorId], references: [id], onDelete: SetNull)
+
+  @@index([createdAt])
+  @@index([actorId])
+  @@index([action])
+  @@index([entityType, entityId])
+  @@map("audit_logs")
+}
+
+// ---------------------------------------------------------------------------
+// Event, settings and programme (single-row tables use id = 1)
+// ---------------------------------------------------------------------------
+
+enum RsvpMode {
+  OPEN
+  INVITE_ONLY
+}
+
+model Event {
+  id                 Int       @id @default(1)
+  name               String
+  tagline            String?
+  description        String?
+  startsAt           DateTime  @map("starts_at") @db.Timestamptz(3)
+  endsAt             DateTime  @map("ends_at") @db.Timestamptz(3)
+  timezone           String    @default("Africa/Lagos")
+  venueName          String    @map("venue_name")
+  address            String
+  city               String?
+  mapUrl             String?   @map("map_url")
+  latitude           Float?
+  longitude          Float?
+  theme              String?
+  dressCode          String?   @map("dress_code")
+  parkingInfo        String?   @map("parking_info")
+  contactName        String?   @map("contact_name")
+  contactEmail       String?   @map("contact_email")
+  contactPhone       String?   @map("contact_phone")
+  capacity           Int       @default(250)
+  rsvpOpen           Boolean   @default(true) @map("rsvp_open")
+  rsvpMode           RsvpMode  @default(OPEN) @map("rsvp_mode")
+  rsvpDeadline       DateTime? @map("rsvp_deadline") @db.Timestamptz(3)
+  defaultCompanions  Int       @default(1) @map("default_companions")
+  maxCompanions      Int       @default(4) @map("max_companions")
+  allowCompanions    Boolean   @default(true) @map("allow_companions")
+  updatedAt          DateTime  @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  @@map("event")
+}
+
+model Settings {
+  id                          Int      @id @default(1)
+  // Uploads
+  storageQuotaBytes           BigInt   @default(10737418240) @map("storage_quota_bytes")
+  maxPhotoBytes               Int      @default(10485760) @map("max_photo_bytes")
+  maxVideoBytes               Int      @default(104857600) @map("max_video_bytes")
+  videoUploadsEnabled         Boolean  @default(true) @map("video_uploads_enabled")
+  uploadModerationEnabled     Boolean  @default(true) @map("upload_moderation_enabled")
+  guestUploadsOpen            Boolean  @default(true) @map("guest_uploads_open")
+  maxFilesPerUpload           Int      @default(20) @map("max_files_per_upload")
+  guestUploadAlbumId          String?  @map("guest_upload_album_id") @db.Uuid
+  // Public upload QR token (a capability for the upload page only)
+  uploadToken                 String   @unique @map("upload_token")
+  uploadTokenRotatedAt        DateTime @default(now()) @map("upload_token_rotated_at") @db.Timestamptz(3)
+  // Testimonials
+  testimonialsOpen            Boolean  @default(true) @map("testimonials_open")
+  testimonialsRequireApproval Boolean  @default(true) @map("testimonials_require_approval")
+  testimonialsAllowPhotos     Boolean  @default(true) @map("testimonials_allow_photos")
+  testimonialsAllowVideos     Boolean  @default(false) @map("testimonials_allow_videos")
+  // Branding and SEO
+  primaryColor                String   @default("#071A2B") @map("primary_color")
+  secondaryColor              String   @default("#D6B36A") @map("secondary_color")
+  logoMediaId                 String?  @map("logo_media_id") @db.Uuid
+  heroMediaId                 String?  @map("hero_media_id") @db.Uuid
+  ogImageMediaId              String?  @map("og_image_media_id") @db.Uuid
+  siteTitle                   String?  @map("site_title")
+  siteDescription             String?  @map("site_description")
+  isDemo                      Boolean  @default(false) @map("is_demo")
+  updatedAt                   DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  guestUploadAlbum Album? @relation("GuestUploadAlbum", fields: [guestUploadAlbumId], references: [id], onDelete: SetNull)
+  logoMedia        Media? @relation("LogoMedia", fields: [logoMediaId], references: [id], onDelete: SetNull)
+  heroMedia        Media? @relation("HeroMedia", fields: [heroMediaId], references: [id], onDelete: SetNull)
+  ogImageMedia     Media? @relation("OgImageMedia", fields: [ogImageMediaId], references: [id], onDelete: SetNull)
+
+  @@map("settings")
+}
+
+model ProgrammeItem {
+  id          String   @id @default(uuid()) @db.Uuid
+  startTime   String   @map("start_time") // "HH:mm", event-local time
+  endTime     String?  @map("end_time")
+  title       String
+  description String?
+  speaker     String?
+  location    String?
+  sortOrder   Int      @default(0) @map("sort_order")
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt   DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  @@index([sortOrder])
+  @@map("programme_items")
+}
+
+// ---------------------------------------------------------------------------
+// Celebrant, timeline and family
+// ---------------------------------------------------------------------------
+
+model Celebrant {
+  id              Int       @id @default(1)
+  fullName        String    @map("full_name")
+  preferredName   String    @map("preferred_name")
+  honorific       String?
+  birthDate       DateTime? @map("birth_date") @db.Date
+  birthPlace      String?   @map("birth_place")
+  heroHeadline    String?   @map("hero_headline")
+  introduction    String?
+  biography       String?
+  quote           String?
+  quoteAttribution String?  @map("quote_attribution")
+  achievements    String[]  @default([])
+  values          String[]  @default([])
+  portraitMediaId String?   @map("portrait_media_id") @db.Uuid
+  updatedAt       DateTime  @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  portraitMedia Media? @relation("CelebrantPortrait", fields: [portraitMediaId], references: [id], onDelete: SetNull)
+
+  @@map("celebrant")
+}
+
+enum TimelineCategory {
+  BIRTH
+  EDUCATION
+  CAREER
+  FAMILY
+  FAITH
+  ACHIEVEMENT
+  TRAVEL
+  MILESTONE
+  OTHER
+}
+
+model TimelineEntry {
+  id          String           @id @default(uuid()) @db.Uuid
+  year        Int
+  month       Int?
+  title       String
+  description String?
+  category    TimelineCategory @default(MILESTONE)
+  mediaId     String?          @map("media_id") @db.Uuid
+  sortOrder   Int              @default(0) @map("sort_order")
+  isPublished Boolean          @default(true) @map("is_published")
+  createdAt   DateTime         @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt   DateTime         @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  media Media? @relation("TimelineMedia", fields: [mediaId], references: [id], onDelete: SetNull)
+
+  @@index([year, sortOrder])
+  @@map("timeline_entries")
+}
+
+// generation is relative to the celebrant: -1 parents, 0 celebrant/spouse/siblings,
+// 1 children (and their spouses), 2 grandchildren.
+model FamilyMember {
+  id                String   @id @default(uuid()) @db.Uuid
+  fullName          String   @map("full_name")
+  relationshipLabel String   @map("relationship_label")
+  generation        Int      @default(0)
+  isCelebrant       Boolean  @default(false) @map("is_celebrant")
+  bio               String?
+  birthYear         Int?     @map("birth_year")
+  deathYear         Int?     @map("death_year")
+  photoMediaId      String?  @map("photo_media_id") @db.Uuid
+  sortOrder         Int      @default(0) @map("sort_order")
+  isPublished       Boolean  @default(true) @map("is_published")
+  createdAt         DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt         DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  photoMedia    Media?               @relation("FamilyPhoto", fields: [photoMediaId], references: [id], onDelete: SetNull)
+  relationsFrom FamilyRelationship[] @relation("RelationFrom")
+  relationsTo   FamilyRelationship[] @relation("RelationTo")
+
+  @@index([generation, sortOrder])
+  @@map("family_members")
+}
+
+enum FamilyRelationType {
+  PARENT_OF
+  SPOUSE_OF
+}
+
+// PARENT_OF: from is a parent of to. SPOUSE_OF is stored once per couple.
+// Siblings are derived from shared parents.
+model FamilyRelationship {
+  id        String             @id @default(uuid()) @db.Uuid
+  fromId    String             @map("from_id") @db.Uuid
+  toId      String             @map("to_id") @db.Uuid
+  type      FamilyRelationType
+  createdAt DateTime           @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  from FamilyMember @relation("RelationFrom", fields: [fromId], references: [id], onDelete: Cascade)
+  to   FamilyMember @relation("RelationTo", fields: [toId], references: [id], onDelete: Cascade)
+
+  @@unique([fromId, toId, type])
+  @@index([toId])
+  @@map("family_relationships")
+}
+
+// ---------------------------------------------------------------------------
+// Albums and media
+// ---------------------------------------------------------------------------
+
+model Album {
+  id           String   @id @default(uuid()) @db.Uuid
+  slug         String   @unique
+  title        String
+  description  String?
+  coverMediaId String?  @map("cover_media_id") @db.Uuid
+  sortOrder    Int      @default(0) @map("sort_order")
+  isPublished  Boolean  @default(true) @map("is_published")
+  createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt    DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  coverMedia         Media?     @relation("AlbumCover", fields: [coverMediaId], references: [id], onDelete: SetNull)
+  media              Media[]    @relation("AlbumMedia")
+  guestUploadDefault Settings[] @relation("GuestUploadAlbum")
+
+  @@index([sortOrder])
+  @@map("albums")
+}
+
+enum MediaKind {
+  PHOTO
+  VIDEO
+}
+
+enum MediaSource {
+  ADMIN
+  GUEST_UPLOAD
+  TESTIMONIAL
+}
+
+enum ModerationStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+model Media {
+  id               String           @id @default(uuid()) @db.Uuid
+  kind             MediaKind
+  source           MediaSource
+  status           ModerationStatus @default(PENDING)
+  originalFilename String           @map("original_filename")
+  mimeType         String           @map("mime_type")
+  // Bytes of the original as received by the server (never the client's claim).
+  sizeBytes        BigInt           @map("size_bytes")
+  // Bytes of every stored object for this media: original plus derived variants.
+  storedBytes      BigInt           @map("stored_bytes")
+  width            Int?
+  height           Int?
+  storageKey       String           @unique @map("storage_key")
+  thumbKey         String?          @map("thumb_key")
+  mediumKey        String?          @map("medium_key")
+  checksum         String?
+  caption          String?
+  altText          String?          @map("alt_text")
+  albumId          String?          @map("album_id") @db.Uuid
+  sortOrder        Int              @default(0) @map("sort_order")
+  uploaderName     String?          @map("uploader_name")
+  uploaderMessage  String?          @map("uploader_message")
+  uploadedById     String?          @map("uploaded_by_id") @db.Uuid
+  uploadSessionId  String?          @map("upload_session_id") @db.Uuid
+  reviewedById     String?          @map("reviewed_by_id") @db.Uuid
+  reviewedAt       DateTime?        @map("reviewed_at") @db.Timestamptz(3)
+  createdAt        DateTime         @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt        DateTime         @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  album         Album?         @relation("AlbumMedia", fields: [albumId], references: [id], onDelete: SetNull)
+  uploadedBy    User?          @relation("UploadedBy", fields: [uploadedById], references: [id], onDelete: SetNull)
+  reviewedBy    User?          @relation("ReviewedBy", fields: [reviewedById], references: [id], onDelete: SetNull)
+  uploadSession UploadSession? @relation(fields: [uploadSessionId], references: [id], onDelete: SetNull)
+
+  albumCovers        Album[]         @relation("AlbumCover")
+  celebrantPortraits Celebrant[]     @relation("CelebrantPortrait")
+  timelineEntries    TimelineEntry[] @relation("TimelineMedia")
+  familyMembers      FamilyMember[]  @relation("FamilyPhoto")
+  testimonialPhotos  Testimonial[]   @relation("TestimonialPhoto")
+  testimonialVideos  Testimonial[]   @relation("TestimonialVideo")
+  settingsLogo       Settings[]      @relation("LogoMedia")
+  settingsHero       Settings[]      @relation("HeroMedia")
+  settingsOgImage    Settings[]      @relation("OgImageMedia")
+
+  @@index([status])
+  @@index([source, status, createdAt])
+  @@index([albumId, sortOrder])
+  @@index([createdAt])
+  @@index([storedBytes])
+  @@map("media")
+}
+
+// One row per guest upload batch from the QR upload page.
+model UploadSession {
+  id           String   @id @default(uuid()) @db.Uuid
+  uploaderName String?  @map("uploader_name")
+  message      String?
+  ipHash       String?  @map("ip_hash")
+  userAgent    String?  @map("user_agent")
+  fileCount    Int      @default(0) @map("file_count")
+  totalBytes   BigInt   @default(0) @map("total_bytes")
+  createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  media Media[]
+
+  @@index([createdAt])
+  @@index([ipHash, createdAt])
+  @@map("upload_sessions")
+}
+
+// ---------------------------------------------------------------------------
+// Guests, RSVP, invitations and check-in
+// ---------------------------------------------------------------------------
+
+model GuestCategory {
+  id                String   @id @default(uuid()) @db.Uuid
+  name              String   @unique
+  description       String?
+  defaultCompanions Int      @default(1) @map("default_companions")
+  // Places set aside for this category out of the event capacity. Null = no separate limit.
+  capacity          Int?
+  selfSelectable    Boolean  @default(true) @map("self_selectable")
+  color             String?
+  sortOrder         Int      @default(0) @map("sort_order")
+  createdAt         DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt         DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  guests Guest[]
+
+  @@map("guest_categories")
+}
+
+enum GuestSource {
+  ADMIN_INVITED
+  SELF_REGISTERED
+}
+
+model Guest {
+  id                String      @id @default(uuid()) @db.Uuid
+  fullName          String      @map("full_name")
+  // Stored lower-cased; unique so one person has one invitation.
+  email             String      @unique
+  phone             String?
+  categoryId        String?     @map("category_id") @db.Uuid
+  allowedCompanions Int         @default(1) @map("allowed_companions")
+  notes             String?
+  source            GuestSource
+  createdAt         DateTime    @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt         DateTime    @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  category   GuestCategory? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  rsvp        Rsvp?
+  invitation  Invitation?
+  checkIns    CheckIn[]
+  testimonial Testimonial?
+
+  @@index([categoryId])
+  @@index([createdAt])
+  @@index([fullName])
+  @@map("guests")
+}
+
+enum RsvpResponse {
+  ATTENDING
+  DECLINED
+}
+
+model Rsvp {
+  id             String       @id @default(uuid()) @db.Uuid
+  guestId        String       @unique @map("guest_id") @db.Uuid
+  response       RsvpResponse
+  companionCount Int          @default(0) @map("companion_count")
+  dietary        String?
+  accessibility  String?
+  message        String?
+  answers        Json?
+  submittedAt    DateTime     @default(now()) @map("submitted_at") @db.Timestamptz(3)
+  updatedAt      DateTime     @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  guest      Guest       @relation(fields: [guestId], references: [id], onDelete: Cascade)
+  companions Companion[]
+
+  @@index([response])
+  @@index([submittedAt])
+  @@map("rsvps")
+}
+
+// An accompanying guest (plus-one) named on an RSVP.
+model Companion {
+  id        String   @id @default(uuid()) @db.Uuid
+  rsvpId    String   @map("rsvp_id") @db.Uuid
+  fullName  String   @map("full_name")
+  dietary   String?
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  rsvp Rsvp @relation(fields: [rsvpId], references: [id], onDelete: Cascade)
+
+  @@index([rsvpId])
+  @@map("companions")
+}
+
+enum RsvpQuestionType {
+  TEXT
+  TEXTAREA
+  SELECT
+  CHECKBOX
+}
+
+model RsvpQuestion {
+  id        String           @id @default(uuid()) @db.Uuid
+  label     String
+  helpText  String?          @map("help_text")
+  type      RsvpQuestionType @default(TEXT)
+  options   String[]         @default([])
+  required  Boolean          @default(false)
+  isActive  Boolean          @default(true) @map("is_active")
+  sortOrder Int              @default(0) @map("sort_order")
+  createdAt DateTime         @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt DateTime         @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  @@map("rsvp_questions")
+}
+
+enum InvitationStatus {
+  ACTIVE
+  REVOKED
+}
+
+model Invitation {
+  id            String           @id @default(uuid()) @db.Uuid
+  guestId       String           @unique @map("guest_id") @db.Uuid
+  // Human-readable reference printed on the pass, e.g. "BP70-7K3Q9D".
+  code          String           @unique
+  // Random 32-byte capability (base64url). The QR code encodes a link containing it.
+  token         String           @unique
+  status        InvitationStatus @default(ACTIVE)
+  revokedAt     DateTime?        @map("revoked_at") @db.Timestamptz(3)
+  revokedReason String?          @map("revoked_reason")
+  lastSentAt    DateTime?        @map("last_sent_at") @db.Timestamptz(3)
+  sendCount     Int              @default(0) @map("send_count")
+  createdAt     DateTime         @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt     DateTime         @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  guest    Guest     @relation(fields: [guestId], references: [id], onDelete: Cascade)
+  checkIns CheckIn[]
+
+  @@index([status])
+  @@map("invitations")
+}
+
+// A partial unique index (see migration) allows one active check-in per invitation.
+// Reversing sets reversedAt, which frees the invitation to be checked in again.
+model CheckIn {
+  id            String    @id @default(uuid()) @db.Uuid
+  invitationId  String    @map("invitation_id") @db.Uuid
+  guestId       String    @map("guest_id") @db.Uuid
+  checkedInById String?   @map("checked_in_by_id") @db.Uuid
+  partySize     Int       @default(1) @map("party_size")
+  checkedInAt   DateTime  @default(now()) @map("checked_in_at") @db.Timestamptz(3)
+  deviceInfo    String?   @map("device_info")
+  ip            String?
+  reversedAt    DateTime? @map("reversed_at") @db.Timestamptz(3)
+  reversedById  String?   @map("reversed_by_id") @db.Uuid
+  reverseReason String?   @map("reverse_reason")
+
+  invitation  Invitation @relation(fields: [invitationId], references: [id], onDelete: Cascade)
+  guest       Guest      @relation(fields: [guestId], references: [id], onDelete: Cascade)
+  checkedInBy User?      @relation("CheckedInBy", fields: [checkedInById], references: [id], onDelete: SetNull)
+  reversedBy  User?      @relation("ReversedBy", fields: [reversedById], references: [id], onDelete: SetNull)
+
+  @@index([invitationId])
+  @@index([guestId])
+  @@index([checkedInAt])
+  @@map("check_ins")
+}
+
+// ---------------------------------------------------------------------------
+// Testimonials
+// ---------------------------------------------------------------------------
+
+model Testimonial {
+  id           String           @id @default(uuid()) @db.Uuid
+  authorName   String           @map("author_name")
+  relationship String?
+  email        String?
+  message      String
+  status       ModerationStatus @default(PENDING)
+  // Approval alone never publishes. isPublic is the explicit "Show on public website" toggle.
+  isPublic     Boolean          @default(false) @map("is_public")
+  isFeatured   Boolean          @default(false) @map("is_featured")
+  photoMediaId String?          @map("photo_media_id") @db.Uuid
+  videoMediaId String?          @map("video_media_id") @db.Uuid
+  sortOrder    Int              @default(0) @map("sort_order")
+  // Set when the message was written as part of an RSVP (one per guest).
+  guestId      String?          @unique @map("guest_id") @db.Uuid
+  ipHash       String?          @map("ip_hash")
+  reviewedById String?          @map("reviewed_by_id") @db.Uuid
+  reviewedAt   DateTime?        @map("reviewed_at") @db.Timestamptz(3)
+  editedAt     DateTime?        @map("edited_at") @db.Timestamptz(3)
+  createdAt    DateTime         @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt    DateTime         @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  guest      Guest? @relation(fields: [guestId], references: [id], onDelete: SetNull)
+  photoMedia Media? @relation("TestimonialPhoto", fields: [photoMediaId], references: [id], onDelete: SetNull)
+  videoMedia Media? @relation("TestimonialVideo", fields: [videoMediaId], references: [id], onDelete: SetNull)
+  reviewedBy User?  @relation("TestimonialReviewedBy", fields: [reviewedById], references: [id], onDelete: SetNull)
+
+  @@index([status, isPublic])
+  @@index([createdAt])
+  @@map("testimonials")
+}
