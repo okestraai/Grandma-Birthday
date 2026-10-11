@@ -32,5 +32,11 @@ FROM mcr.microsoft.com/azure-storage/azurite:latest
 
 # Render assigns the port at runtime, so it has to be read from the environment rather
 # than baked in. --skipApiVersionCheck keeps Azurite from rejecting newer SDK versions.
+#
+# --disableProductStyleUrl is REQUIRED here and the service returns HTTP 400 without it.
+# Served from a real hostname, Azurite defaults to "production-style" URLs and parses the
+# account name out of the subdomain, so it reads this service as account
+# "birthday-azurite-uat" (which does not exist) instead of taking the account from the
+# first path segment of BlobEndpoint (.../uatstorage). This flag forces path-style parsing.
 ENTRYPOINT []
-CMD ["sh", "-c", "azurite-blob --blobHost 0.0.0.0 --blobPort ${PORT:-10000} --location /data --skipApiVersionCheck"]
+CMD ["sh", "-c", "azurite-blob --blobHost 0.0.0.0 --blobPort ${PORT:-10000} --location /data --skipApiVersionCheck --disableProductStyleUrl"]
