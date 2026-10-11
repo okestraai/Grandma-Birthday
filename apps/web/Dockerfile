@@ -11,6 +11,9 @@ COPY packages/types packages/types
 COPY apps/web apps/web
 ARG VITE_SITE_URL
 ENV VITE_SITE_URL=${VITE_SITE_URL}
+# Sample content when the API is down (see the README). Pass false for the live site.
+ARG VITE_DEMO_FALLBACK=true
+ENV VITE_DEMO_FALLBACK=${VITE_DEMO_FALLBACK}
 WORKDIR /repo/apps/web
 RUN npx vite build && node scripts/precompress.mjs
 

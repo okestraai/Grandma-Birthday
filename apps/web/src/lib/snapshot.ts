@@ -1,4 +1,5 @@
 import { hashKey, type QueryClient, type QueryKey } from '@tanstack/react-query';
+import { isDemoData } from './demo-fallback';
 
 /**
  * Last-good copies of the public site's data, so the site still shows something when the API is down.
@@ -11,7 +12,7 @@ import { hashKey, type QueryClient, type QueryKey } from '@tanstack/react-query'
  * the page shows the saved copy meanwhile.
  *
  * Only whole-site public data is kept. Anything behind a personal link (RSVP invites,
- * invitations, upload links) and all admin data is never stored.
+ * invitations, upload links), all admin data and sample data (lib/demo-fallback.ts) are never stored.
  */
 
 export const SNAPSHOT_STORAGE_KEY = 'bp_public_snapshot_v1';
@@ -113,6 +114,8 @@ export function buildSnapshot(client: QueryClient, previous: SnapshotEntry[], no
   for (const query of client.getQueryCache().getAll()) {
     const { data, dataUpdatedAt, status } = query.state;
     if (!isSnapshotKey(query.queryKey) || data === undefined || status === 'pending' || !dataUpdatedAt) continue;
+    // Sample data shown while the API is down is never saved as the last good copy.
+    if (isDemoData(data)) continue;
     current.push({ key: query.queryKey, data: trimmed(data), updatedAt: dataUpdatedAt });
   }
   const entries = newestPerKey(previous, current).filter((e) => now - e.updatedAt <= SNAPSHOT_MAX_AGE_MS);

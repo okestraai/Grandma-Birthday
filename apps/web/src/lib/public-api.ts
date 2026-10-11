@@ -15,10 +15,14 @@ import type {
   UploadPageConfig,
 } from '@birthday/types';
 import { api } from './api';
+import { withDemoFallback } from './demo-fallback';
 
 /**
  * TanStack Query hooks for the public site. Every key starts with 'public'
  * so the admin side can invalidate the whole public cache in one call.
+ *
+ * Whole-site queries go through withDemoFallback, so they show sample content when the API is
+ * unreachable and nothing real is saved. Queries behind a personal link never do.
  */
 export const publicKeys = {
   all: ['public'] as const,
@@ -41,7 +45,7 @@ export const MEDIA_PAGE_SIZE = 24;
 /** The home page and the public layout's data; also prefetched from main.tsx on public URLs. */
 export const siteQuery = queryOptions({
   queryKey: publicKeys.site,
-  queryFn: ({ signal }) => api.get<SiteOverview>('/site', undefined, signal),
+  queryFn: (ctx) => withDemoFallback(ctx, () => api.get<SiteOverview>('/site', undefined, ctx.signal)),
   staleTime: 5 * 60_000,
 });
 
@@ -52,28 +56,28 @@ export function useSite() {
 export function useTimeline() {
   return useQuery({
     queryKey: publicKeys.timeline,
-    queryFn: ({ signal }) => api.get<TimelineEntry[]>('/timeline', undefined, signal),
+    queryFn: (ctx) => withDemoFallback(ctx, () => api.get<TimelineEntry[]>('/timeline', undefined, ctx.signal)),
   });
 }
 
 export function useFamily() {
   return useQuery({
     queryKey: publicKeys.family,
-    queryFn: ({ signal }) => api.get<FamilyTree>('/family', undefined, signal),
+    queryFn: (ctx) => withDemoFallback(ctx, () => api.get<FamilyTree>('/family', undefined, ctx.signal)),
   });
 }
 
 export function useAlbums() {
   return useQuery({
     queryKey: publicKeys.albums,
-    queryFn: ({ signal }) => api.get<AlbumSummary[]>('/albums', undefined, signal),
+    queryFn: (ctx) => withDemoFallback(ctx, () => api.get<AlbumSummary[]>('/albums', undefined, ctx.signal)),
   });
 }
 
 export function useAlbum(slug: string) {
   return useQuery({
     queryKey: publicKeys.album(slug),
-    queryFn: ({ signal }) => api.get<AlbumDetail>(`/albums/${encodeURIComponent(slug)}`, undefined, signal),
+    queryFn: (ctx) => withDemoFallback(ctx, () => api.get<AlbumDetail>(`/albums/${encodeURIComponent(slug)}`, undefined, ctx.signal)),
     enabled: Boolean(slug),
   });
 }
@@ -81,8 +85,10 @@ export function useAlbum(slug: string) {
 export function useAlbumMedia(slug: string, enabled = true) {
   return useInfiniteQuery({
     queryKey: publicKeys.albumMedia(slug),
-    queryFn: ({ pageParam, signal }) =>
-      api.get<Paginated<PublicMedia>>('/media', { album: slug, page: pageParam, pageSize: MEDIA_PAGE_SIZE }, signal),
+    queryFn: (ctx) =>
+      withDemoFallback(ctx, () =>
+        api.get<Paginated<PublicMedia>>('/media', { album: slug, page: ctx.pageParam, pageSize: MEDIA_PAGE_SIZE }, ctx.signal),
+      ),
     initialPageParam: 1,
     getNextPageParam: (last) => (last.page < last.totalPages ? last.page + 1 : undefined),
     enabled: enabled && Boolean(slug),
@@ -92,15 +98,17 @@ export function useAlbumMedia(slug: string, enabled = true) {
 export function useProgramme() {
   return useQuery({
     queryKey: publicKeys.programme,
-    queryFn: ({ signal }) => api.get<ProgrammeItem[]>('/programme', undefined, signal),
+    queryFn: (ctx) => withDemoFallback(ctx, () => api.get<ProgrammeItem[]>('/programme', undefined, ctx.signal)),
   });
 }
 
 export function useTestimonials(pageSize = 12) {
   return useInfiniteQuery({
     queryKey: publicKeys.testimonials(pageSize),
-    queryFn: ({ pageParam, signal }) =>
-      api.get<Paginated<PublicTestimonial>>('/testimonials/public', { page: pageParam, pageSize }, signal),
+    queryFn: (ctx) =>
+      withDemoFallback(ctx, () =>
+        api.get<Paginated<PublicTestimonial>>('/testimonials/public', { page: ctx.pageParam, pageSize }, ctx.signal),
+      ),
     initialPageParam: 1,
     getNextPageParam: (last) => (last.page < last.totalPages ? last.page + 1 : undefined),
     placeholderData: keepPreviousData,
@@ -110,7 +118,7 @@ export function useTestimonials(pageSize = 12) {
 export function useRsvpForm() {
   return useQuery({
     queryKey: publicKeys.rsvpForm,
-    queryFn: ({ signal }) => api.get<RsvpFormConfig>('/rsvp/form', undefined, signal),
+    queryFn: (ctx) => withDemoFallback(ctx, () => api.get<RsvpFormConfig>('/rsvp/form', undefined, ctx.signal)),
     staleTime: 30_000,
   });
 }

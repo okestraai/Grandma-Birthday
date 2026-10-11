@@ -86,6 +86,7 @@ export default function PublicLayout() {
           <OfflineBanner
             className="pointer-events-auto self-center"
             hasData={server.hasData}
+            sample={server.sample}
             retrying={server.retrying}
             onRetry={() => void server.retry()}
           />

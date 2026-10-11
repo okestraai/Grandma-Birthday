@@ -40,11 +40,31 @@ function preloadFonts(): Plugin {
   };
 }
 
+/**
+ * Builds made with VITE_DEMO_FALLBACK=false leave out the sample content's images (public/demo/).
+ * The sample data itself is already dropped from the bundle (see src/lib/demo-fallback.ts).
+ */
+function dropDemoImages(): Plugin {
+  let outDir = '';
+  let enabled = true;
+  return {
+    name: 'drop-demo-images',
+    apply: 'build',
+    configResolved(config) {
+      outDir = path.resolve(config.root, config.build.outDir);
+      enabled = config.env.VITE_DEMO_FALLBACK !== 'false';
+    },
+    closeBundle() {
+      if (!enabled) fs.rmSync(path.join(outDir, 'demo'), { recursive: true, force: true });
+    },
+  };
+}
+
 export default defineConfig({
   // The HTTPS phone-testing server keeps its own dependency cache, so it can run beside the
   // normal dev server without the two overwriting each other's pre-bundled React.
   cacheDir: devHttps ? 'node_modules/.vite-https' : 'node_modules/.vite',
-  plugins: [react(), tailwindcss(), preloadFonts(), buildVersion()],
+  plugins: [react(), tailwindcss(), preloadFonts(), buildVersion(), dropDemoImages()],
   // Pre-bundle every dependency the app uses when the dev server starts. Otherwise Vite discovers
   // packages lazily (charts, QR scanner, menus) as pages are first opened, re-bundles, and an open
   // tab can end up with two copies of React ("Invalid hook call" / reading 'useState' of null).
@@ -107,6 +127,8 @@ export default defineConfig({
     globals: true,
     environment: 'jsdom',
     setupFiles: ['./src/test/setup.ts'],
+    // Sample content when the API is down is off in tests; lib/demo-fallback.test.ts turns it on.
+    env: { VITE_DEMO_FALLBACK: 'false' },
     css: false,
     include: ['src/**/*.test.{ts,tsx}', 'server/**/*.test.mjs', 'scripts/**/*.test.ts'],
   },

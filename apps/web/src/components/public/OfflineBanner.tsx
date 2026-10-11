@@ -2,28 +2,34 @@ import { useCallback, useEffect } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { CloudOff, RotateCcw } from 'lucide-react';
 import { isServerUnreachable } from '@/lib/api';
+import { isDemoData } from '@/lib/demo-fallback';
 import { publicKeys, useSite } from '@/lib/public-api';
 import { OFFLINE_RETRY_MS } from '@/lib/query';
 import { cn } from '@/lib/utils';
 
 /**
  * Whether the celebration server is unreachable, judged by the site query every public page uses,
- * and a `retry` that refetches every public query that failed that way. While it is down, those
- * queries are retried every 15 seconds, when the browser comes back online and when the tab is
- * shown again.
+ * and a `retry` that refetches every public query that failed that way or is showing sample
+ * content (lib/demo-fallback.ts). While it is down, those queries are retried every 15 seconds,
+ * when the browser comes back online and when the tab is shown again.
  */
 export function useServerDown() {
   const client = useQueryClient();
   const site = useSite();
-  const down = site.isError && isServerUnreachable(site.error);
+  const sample = isDemoData(site.data);
+  const down = (site.isError && isServerUnreachable(site.error)) || sample;
 
   const retry = useCallback(
     () =>
-      client.refetchQueries({
-        queryKey: publicKeys.all,
-        type: 'active',
-        predicate: (query) => query.state.status === 'error' && isServerUnreachable(query.state.error),
-      }),
+      Promise.all([
+        client.refetchQueries({
+          queryKey: publicKeys.all,
+          type: 'active',
+          predicate: (query) => query.state.status === 'error' && isServerUnreachable(query.state.error),
+        }),
+        // Sample data counts as a success, so it is marked stale too: pages not open now refetch when opened.
+        client.invalidateQueries({ queryKey: publicKeys.all, predicate: (query) => isDemoData(query.state.data) }),
+      ]),
     [client],
   );
 
@@ -43,11 +49,20 @@ export function useServerDown() {
     };
   }, [down, retry]);
 
-  return { down, hasData: site.data !== undefined, retrying: site.isFetching, retry };
+  return { down, hasData: site.data !== undefined, sample, retrying: site.isFetching, retry };
+}
+
+interface OfflineBannerProps {
+  hasData: boolean;
+  /** The page is showing sample content rather than saved data. */
+  sample?: boolean;
+  retrying: boolean;
+  onRetry: () => void;
+  className?: string;
 }
 
 /** A slim, polite notice while the server is unreachable. PublicLayout places it at the foot of the screen. */
-export function OfflineBanner({ hasData, retrying, onRetry, className }: { hasData: boolean; retrying: boolean; onRetry: () => void; className?: string }) {
+export function OfflineBanner({ hasData, sample, retrying, onRetry, className }: OfflineBannerProps) {
   return (
     <div
       role="status"
@@ -55,8 +70,14 @@ export function OfflineBanner({ hasData, retrying, onRetry, className }: { hasDa
     >
       <CloudOff aria-hidden className="size-4 shrink-0 text-gold" />
       <p className="leading-snug">
-        We can’t reach the celebration server right now.{' '}
-        {hasData ? 'You’re seeing the last saved version.' : 'Retrying…'}
+        {sample ? (
+          'The celebration server is offline. You’re seeing sample content.'
+        ) : (
+          <>
+            We can’t reach the celebration server right now.{' '}
+            {hasData ? 'You’re seeing the last saved version.' : 'Retrying…'}
+          </>
+        )}
       </p>
       <button
         type="button"

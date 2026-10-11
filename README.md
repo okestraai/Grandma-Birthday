@@ -28,17 +28,18 @@ The repository ships with fictional demo content so you can see everything worki
 3. [Environment variables](#environment-variables)
 4. [Database, migrations and seed data](#database-migrations-and-seed-data)
 5. [Running the apps](#running-the-apps)
-6. [Tests](#tests)
-7. [Docker](#docker)
-8. [Storage (Azure Blob Storage)](#storage-azure-blob-storage)
-9. [Admin accounts and roles](#admin-accounts-and-roles)
-10. [Guests, invitations and capacity](#guests-invitations-and-capacity)
-11. [QR codes: invitations, check-in and photo uploads](#qr-codes-invitations-check-in-and-photo-uploads)
-12. [Storage quota](#storage-quota)
-13. [SEO](#seo)
-14. [Security](#security)
-15. [Deployment](#deployment)
-16. [Troubleshooting](#troubleshooting)
+6. [Sample content when the API is down](#sample-content-when-the-api-is-down)
+7. [Tests](#tests)
+8. [Docker](#docker)
+9. [Storage (Azure Blob Storage)](#storage-azure-blob-storage)
+10. [Admin accounts and roles](#admin-accounts-and-roles)
+11. [Guests, invitations and capacity](#guests-invitations-and-capacity)
+12. [QR codes: invitations, check-in and photo uploads](#qr-codes-invitations-check-in-and-photo-uploads)
+13. [Storage quota](#storage-quota)
+14. [SEO](#seo)
+15. [Security](#security)
+16. [Deployment](#deployment)
+17. [Troubleshooting](#troubleshooting)
 
 ---
 
@@ -141,7 +142,7 @@ The important ones:
 | `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASSWORD`, `SMTP_FROM` | Email. Leave `SMTP_HOST` empty to log emails instead of sending them |
 | `SEED_ADMIN_EMAIL`, `SEED_ADMIN_PASSWORD`, `SEED_DEMO` | Used by the seed script (see below) |
 
-The web app needs no variables in development. For production builds, `VITE_SITE_URL` sets the site address used in canonical links, and `VITE_API_URL` is only needed if the API is on a different origin.
+The web app needs no variables in development. For production builds, `VITE_SITE_URL` sets the site address used in canonical links, and `VITE_API_URL` is only needed if the API is on a different origin. `VITE_DEMO_FALLBACK=false` turns off the [sample content](#sample-content-when-the-api-is-down) shown when the API is down; set it for the live site.
 
 In production the API refuses to start if the secrets still have their example values or `docker-compose.yml`'s local fallbacks, if `COOKIE_SECURE` is not `true`, if `CORS_ORIGIN` is `*`, or if the storage connection string points at the local emulator.
 
@@ -179,6 +180,41 @@ The migration adds database-level rules that Prisma cannot express. For example:
 | `npm run typecheck` | TypeScript checks for both apps |
 
 The Vite dev server forwards `/api` and `/sitemap.xml` to the API, like the production web server does.
+
+---
+
+## Sample content when the API is down
+
+Until the site goes live, the public pages show sample content when the API cannot be reached, so the layout can still be seen. Admin pages are not affected.
+
+For each public page's data, the site uses, in this order:
+
+1. the live API;
+2. the last saved copy (kept in the browser, or injected by the production web server);
+3. the sample content in `apps/web/src/demo/`.
+
+The sample content is loaded only when a request fails because the server is unreachable (a network error, or a 502, 503 or 504) and there is no saved copy. It is never saved as the last good copy. Personal links (invitations, RSVP invites, guest upload links) never get sample content. While it shows, a notice at the foot of the screen says "The celebration server is offline. You're seeing sample content." The site keeps retrying the API, and real data replaces the sample as soon as it answers. Forms still say they could not reach the server, and keep what was typed.
+
+**Refreshing the sample content.** Start the API with the demo content loaded (`SEED_DEMO=true`), then run:
+
+```bash
+node apps/web/scripts/capture-demo.mjs            # or pass the API address, e.g. http://localhost:4100
+```
+
+It rewrites `apps/web/src/demo/fixtures.ts` and the photos in `apps/web/public/demo/`.
+
+**Removing it before going live.** Either:
+
+- build with `VITE_DEMO_FALLBACK=false` (the Docker build takes it as a build argument). The sample data and photos are then left out of the build; or
+- delete it from the code:
+  - `apps/web/src/demo/` (the folder)
+  - `apps/web/public/demo/` (the folder)
+  - `apps/web/scripts/capture-demo.mjs`
+  - `apps/web/src/lib/demo-fallback.ts` and `apps/web/src/lib/demo-fallback.test.tsx`
+  - in `apps/web/src/lib/public-api.ts`, the `withDemoFallback` import, and each `withDemoFallback(ctx, () => …)` wrapper (keep the `api.get(…)` call inside it)
+  - in `apps/web/src/lib/snapshot.ts`, the `isDemoData` import and check
+  - in `apps/web/src/components/public/OfflineBanner.tsx` and `apps/web/src/pages/public/PublicLayout.tsx`, the `isDemoData` and `sample` parts
+  - in `apps/web/vite.config.ts`, the `dropDemoImages` plugin and the `VITE_DEMO_FALLBACK` test setting
 
 ---
 
@@ -397,8 +433,10 @@ openssl rand -base64 48
 
 ```bash
 docker build -f apps/api/Dockerfile -t birthday-api .
-docker build -f apps/web/Dockerfile --build-arg VITE_SITE_URL=https://your-domain -t birthday-web .
+docker build -f apps/web/Dockerfile --build-arg VITE_SITE_URL=https://your-domain --build-arg VITE_DEMO_FALLBACK=false -t birthday-web .
 ```
+
+Before going live: `VITE_DEMO_FALLBACK=false`. Without it, visitors see [sample content](#sample-content-when-the-api-is-down) whenever the API is down and nothing is saved.
 
 **4. Set the API's environment variables.** These are the ones every deployment needs. [`.env.example`](.env.example) lists the rest.
 

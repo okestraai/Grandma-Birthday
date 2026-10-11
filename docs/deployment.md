@@ -100,8 +100,10 @@ It listens on `PORT` (default 4100), runs as a non-root user and exposes `GET /a
 Build from the repository root:
 
 ```bash
-docker build -f apps/web/Dockerfile --build-arg VITE_SITE_URL=https://your-domain -t birthday-web .
+docker build -f apps/web/Dockerfile --build-arg VITE_SITE_URL=https://your-domain --build-arg VITE_DEMO_FALLBACK=false -t birthday-web .
 ```
+
+`VITE_DEMO_FALLBACK=false` leaves out the sample content the public pages show when the API is down. Set it for the live site (see the README, "Sample content when the API is down").
 
 ### Option 1 (recommended): the included web server
 

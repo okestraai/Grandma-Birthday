@@ -59,9 +59,9 @@ export function csrfHeaders(): Record<string, string> {
   return token ? { 'X-CSRF-Token': token } : {};
 }
 
-/** Absolute URL for an API path such as "/api/media/<id>/thumb". */
+/** Absolute URL for an API path such as "/api/media/<id>/thumb". Other paths (site files such as /demo/...) are left as they are. */
 export function apiUrl(path: string): string {
-  if (/^https?:\/\//.test(path)) return path;
+  if (/^https?:\/\//.test(path) || !path.startsWith('/api/')) return path;
   return `${API_BASE}${path}`;
 }
 
