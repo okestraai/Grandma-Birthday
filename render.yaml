@@ -9,19 +9,27 @@
 #                    │
 #                    └── proxies /api/* ──► birthday-api (free web service, Docker)
 #                                                 ├──► birthday-db (free Postgres)
-#                                                 └──► Azure Blob Storage (not Render)
+#                                                 └──► birthday-azurite-uat (free web service)
 #
-# This runs the SAME two images production would run, so UAT covers the real per-page SEO
-# tags, security headers, /api proxying, the new-version notice and the API-down snapshot.
-# The browser sees one origin, so login cookies stay same-origin and no CORS or
-# COOKIE_DOMAIN juggling is needed.
+# The api and web services run the SAME images production would run, so UAT covers the real
+# per-page SEO tags, security headers, /api proxying, the new-version notice and the
+# API-down snapshot. The browser sees one origin, so login cookies stay same-origin and no
+# CORS or COOKIE_DOMAIN juggling is needed. Storage is the one deliberate substitution:
+# Azurite stands in for Azure Blob Storage, because Render has no Azure-compatible storage
+# product. Production must point at a real Azure Storage account.
 #
-# THE ONE NUMBER THAT MATTERS: free web services share 750 instance hours per workspace
-# per calendar month, and this blueprint runs two of them. Both up continuously burn 48
-# service-hours a day, which exhausts the pool in about 15 days and then suspends EVERY
-# free service in the workspace until the next month. Letting them spin down when idle
-# (they stop after 15 minutes without traffic, and consume nothing while down) stretches
-# that to roughly a month of normal office-hours testing.
+# THE ONE NUMBER THAT MATTERS: free web services share 750 instance hours per workspace per
+# calendar month, and this blueprint runs THREE of them (api, web, azurite). All three up
+# continuously burn 72 service-hours a day, which exhausts the pool in about 10 days and
+# then suspends EVERY free service in the workspace until the next month. Letting them spin
+# down when idle (they stop after 15 minutes without traffic, and consume nothing while
+# down) stretches that to roughly a month of normal office-hours testing.
+#
+# KNOWN SHARP EDGE: the API creates its storage container once, at startup. If Azurite is
+# spun down at that moment the call gets a 502 from Render's proxy, and the API then reports
+# storage unavailable for the whole life of that process - uploads stay broken until it is
+# restarted while Azurite is awake. Restarting the API fixes it. A real Azure Storage
+# account never sleeps and does not have this problem.
 #
 # If UAT needs to outlast that, serve the front end as a Render static site instead: it
 # consumes no instance hours and leaves the whole pool for the API. That variant costs you
@@ -89,7 +97,10 @@ services:
         sync: false
       - key: CORS_ORIGIN
         sync: false
-      # Azure Storage account + PRIVATE container. Render has no substitute for this.
+      # Blob storage. For UAT this points at the birthday-azurite-uat service below:
+      #   DefaultEndpointsProtocol=https;AccountName=uatstorage;AccountKey=<AZURITE_ACCOUNTS key>;
+      #   BlobEndpoint=https://<azurite service>.onrender.com/uatstorage;
+      # PRODUCTION must instead use a real Azure Storage account with a PRIVATE container.
       - key: AZURE_STORAGE_CONNECTION_STRING
         sync: false
       - key: AZURE_STORAGE_CONTAINER
@@ -165,6 +176,31 @@ services:
       # SNAPSHOT_DIR is intentionally unset: free services get no persistent disk, so the
       # snapshot lands in the container's temp folder and is lost on restart. The feature
       # still works within a single run, which is enough to acceptance-test it.
+
+  # --- Blob storage for UAT: Azurite ------------------------------------------
+  # Render has no Azure-Blob-compatible storage product (its own object storage is in
+  # alpha behind a waitlist and is S3-compatible, as is MinIO), and the API talks to
+  # Azure Blob through @azure/storage-blob. Azurite is Microsoft's own emulator and is
+  # wire-compatible, so the API runs against it unmodified.
+  #
+  # UAT ONLY - see docker/azurite-uat/Dockerfile. Free services get no persistent disk,
+  # so uploads are lost whenever this restarts, redeploys or spins down. Production points
+  # AZURE_STORAGE_CONNECTION_STRING at a real Azure Storage account instead.
+  - name: birthday-azurite-uat
+    type: web
+    runtime: docker
+    plan: free
+    region: ohio
+    dockerfilePath: ./docker/azurite-uat/Dockerfile
+    dockerContext: ./docker/azurite-uat
+    envVars:
+      # uatstorage:<base64 of 32 random bytes>. The account name must NOT be
+      # devstoreaccount1, or the API's production config guard rejects the connection
+      # string as "the local emulator". Treat the key as a secret: free plans have no
+      # private services, so this service is reachable from the internet (Azurite still
+      # requires a valid SharedKey signature on every request).
+      - key: AZURITE_ACCOUNTS
+        sync: false
 
 databases:
   - name: birthday-db
