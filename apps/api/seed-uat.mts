@@ -81,27 +81,36 @@ async function main(): Promise<void> {
   ok(`signed in as ${session.user.email} (${session.user.role})`);
 
   // --- celebrant and event -------------------------------------------------
-  const c = DEMO_CELEBRANT;
-  await api('PUT', '/admin/celebrant', {
+  // Never overwrite real content. Once someone has replaced the placeholder celebrant
+  // through the admin dashboard, writing DEMO_CELEBRANT over it would destroy their work.
+  // Pass SEED_OVERWRITE=1 to force it.
+  const current = await api('GET', '/admin/celebrant');
+  const placeholder = !current.fullName || current.fullName === 'The Celebrant';
+  if (!placeholder && process.env.SEED_OVERWRITE !== '1') {
+    warn(`celebrant is already "${current.fullName}" - leaving celebrant and event alone (SEED_OVERWRITE=1 to replace)`);
+  } else {
+    const c = DEMO_CELEBRANT;
+    await api('PUT', '/admin/celebrant', {
     fullName: c.fullName, preferredName: c.preferredName, honorific: c.honorific,
     birthDate: iso(c.birthDate), celebrationAge: c.celebrationAge,
     birthPlace: c.birthPlace, heroHeadline: c.heroHeadline,
     introduction: c.introduction, biography: c.biography, quote: c.quote,
-    quoteAttribution: c.quoteAttribution, achievements: c.achievements, values: c.values,
-  });
-  ok('celebrant');
+      quoteAttribution: c.quoteAttribution, achievements: c.achievements, values: c.values,
+    });
+    ok('celebrant');
 
-  const e = DEMO_EVENT;
-  await api('PUT', '/admin/event', {
+    const e = DEMO_EVENT;
+    await api('PUT', '/admin/event', {
     name: e.name, tagline: e.tagline, description: e.description,
     startsAt: iso(e.startsAt), endsAt: iso(e.endsAt), timezone: e.timezone,
     venueName: e.venueName, address: e.address, city: e.city, mapUrl: e.mapUrl,
     latitude: e.latitude, longitude: e.longitude, theme: e.theme, dressCode: e.dressCode,
     parkingInfo: e.parkingInfo, contactName: e.contactName, contactEmail: e.contactEmail,
     contactPhone: e.contactPhone, capacity: e.capacity, rsvpOpen: e.rsvpOpen,
-    rsvpMode: e.rsvpMode, rsvpDeadline: iso(e.rsvpDeadline),
-  });
-  ok('event');
+      rsvpMode: e.rsvpMode, rsvpDeadline: iso(e.rsvpDeadline),
+    });
+    ok('event');
+  }
 
   // --- portrait: the hero's arched photo -----------------------------------
   const existingPortrait = await api('GET', '/admin/celebrant');
