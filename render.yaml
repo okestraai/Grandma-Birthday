@@ -1,0 +1,168 @@
+# Render blueprint for a temporary UAT environment on Render's FREE plans.
+#
+# This is a throwaway acceptance-testing environment, NOT the production deployment.
+# It is tuned for fidelity - testers should see what production will do - rather than for
+# running cheaply for a long time. See docs/render-free-plan.md for the trade-offs, and
+# docs/deployment.md for the real production options.
+#
+#   Browser ──► birthday-web (free web service, Docker: apps/web/server/index.mjs)
+#                    │
+#                    └── proxies /api/* ──► birthday-api (free web service, Docker)
+#                                                 ├──► birthday-db (free Postgres)
+#                                                 └──► Azure Blob Storage (not Render)
+#
+# This runs the SAME two images production would run, so UAT covers the real per-page SEO
+# tags, security headers, /api proxying, the new-version notice and the API-down snapshot.
+# The browser sees one origin, so login cookies stay same-origin and no CORS or
+# COOKIE_DOMAIN juggling is needed.
+#
+# THE ONE NUMBER THAT MATTERS: free web services share 750 instance hours per workspace
+# per calendar month, and this blueprint runs two of them. Both up continuously burn 48
+# service-hours a day, which exhausts the pool in about 15 days and then suspends EVERY
+# free service in the workspace until the next month. Letting them spin down when idle
+# (they stop after 15 minutes without traffic, and consume nothing while down) stretches
+# that to roughly a month of normal office-hours testing.
+#
+# If UAT needs to outlast that, serve the front end as a Render static site instead: it
+# consumes no instance hours and leaves the whole pool for the API. That variant costs you
+# per-page SEO tags for link previews, and needs scripts/render-static-postbuild.sh to
+# substitute __SITE_URL__ into robots.txt. docs/render-free-plan.md has the details.
+#
+# Also note: free Postgres is deleted 30 days after it is created, and cold starts take
+# about a minute after 15 minutes of idle.
+
+services:
+  # --- API: NestJS in Docker ---------------------------------------------------
+  - name: birthday-api
+    type: web
+    runtime: docker
+    plan: free
+    region: ohio
+    dockerfilePath: ./apps/api/Dockerfile
+    dockerContext: .
+    # The free plan has no pre-deploy command AND no shell access, so both the migration
+    # and the first-admin seed have to run at startup. The image keeps the prisma CLI
+    # (hoisted to /repo/node_modules/.bin) precisely so this works, and one free instance
+    # means there is no risk of two instances migrating at once.
+    #
+    # run-seed.js is safe to leave here permanently: with SEED_DEMO=false it only creates
+    # SEED_ADMIN_EMAIL if that user does not already exist, and does nothing otherwise.
+    # Once you have signed in successfully you can delete the SEED_ADMIN_* variables below
+    # and drop "node dist/seed/run-seed.js &&" to save a few seconds on every cold start.
+    dockerCommand: sh -c "npx prisma migrate deploy && node dist/seed/run-seed.js && node dist/main.js"
+    # Checks the database only. /api/health/ready also checks Azure Blob Storage - switch to
+    # it once AZURE_STORAGE_CONNECTION_STRING is set, so a bad storage config fails the deploy.
+    healthCheckPath: /api/health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 4100
+      # Render terminates TLS in front of the service, so the API sees exactly one proxy.
+      - key: TRUST_PROXY
+        value: 1
+      - key: LOG_LEVEL
+        value: log
+      - key: COOKIE_SECURE
+        value: true
+      - key: DATABASE_URL
+        fromDatabase:
+          name: birthday-db
+          property: connectionString
+
+      # --- Set these in the Render dashboard (they are marked sync: false) -------
+      # JWT secrets: paste the two 64-character values already generated in your local
+      # .env.production. They must be at least 32 characters and must differ from each other.
+      - key: JWT_SECRET
+        sync: false
+      - key: JWT_REFRESH_SECRET
+        sync: false
+      # Both must be the site's final URL, e.g. https://birthday-web.onrender.com
+      # (or your custom domain). CORS_ORIGIN must not be "*" in production.
+      - key: PUBLIC_WEB_URL
+        sync: false
+      - key: CORS_ORIGIN
+        sync: false
+      # Azure Storage account + PRIVATE container. Render has no substitute for this.
+      - key: AZURE_STORAGE_CONNECTION_STRING
+        sync: false
+      - key: AZURE_STORAGE_CONTAINER
+        value: birthday-media
+      # SMTP. Leave SMTP_HOST unset to log emails instead of sending them.
+      - key: SMTP_HOST
+        sync: false
+      - key: SMTP_PORT
+        value: 587
+      - key: SMTP_SECURE
+        value: false
+      - key: SMTP_USER
+        sync: false
+      - key: SMTP_PASSWORD
+        sync: false
+      - key: SMTP_FROM
+        sync: false
+
+      # --- First admin (created by the seed in dockerCommand above) -------------
+      # SEED_DEMO must stay false: the demo password is public in this repository and
+      # the seed refuses SEED_DEMO=true when NODE_ENV=production.
+      - key: SEED_DEMO
+        value: false
+      - key: SEED_ADMIN_EMAIL
+        sync: false
+      # Must be at least 12 characters. One was generated for you in .env.production.
+      - key: SEED_ADMIN_PASSWORD
+        sync: false
+
+      # --- Upload limits: deliberately the production defaults ------------------
+      # UAT has to reject and accept exactly what production will, otherwise testers file
+      # bugs against limits that do not exist. Videos are streamed to disk and hashed, never
+      # decoded, so 100 MB is safe on a small instance. Photos DO go through sharp, which
+      # decodes them in memory: a 10 MB JPEG can expand past 150 MB, and the free instance
+      # has roughly 380 MB free, so several testers uploading large photos at the same
+      # instant can still exhaust it. That is a free-plan artefact, not a product bug.
+      - key: MAX_PHOTO_SIZE
+        value: 10485760     # 10 MB
+      - key: MAX_VIDEO_SIZE
+        value: 104857600    # 100 MB
+      - key: MAX_STORAGE_BYTES
+        value: 10737418240  # 10 GB, matched to your Azure container
+      - key: GUEST_UPLOAD_FILES_PER_HOUR
+        value: 60
+
+  # --- Web site: the real production web server, in Docker ---------------------
+  # Deliberately the same image and server that production would run, so UAT exercises
+  # per-page SEO tags, the security headers, the /api proxy, the version notice and the
+  # API-down snapshot behaviour rather than approximations of them.
+  - name: birthday-web
+    type: web
+    runtime: docker
+    plan: free
+    region: ohio
+    dockerfilePath: ./apps/web/Dockerfile
+    dockerContext: .
+    # Served straight off the built files, so it answers even while the API is cold.
+    healthCheckPath: /robots.txt
+    envVars:
+      - key: PORT
+        value: 8080
+      # Render turns a Docker service's environment variables into build arguments, which is
+      # how this reaches "ARG VITE_SITE_URL" in apps/web/Dockerfile and gets baked into the
+      # built site. Set it to this service's own final URL (or your UAT custom domain).
+      - key: VITE_SITE_URL
+        sync: false
+      - key: PUBLIC_WEB_URL
+        sync: false
+      # Where this server reaches the API. The free plan has no private networking, so this
+      # is the API's public URL, e.g. https://birthday-api.onrender.com
+      - key: API_ORIGIN
+        sync: false
+      # SNAPSHOT_DIR is intentionally unset: free services get no persistent disk, so the
+      # snapshot lands in the container's temp folder and is lost on restart. The feature
+      # still works within a single run, which is enough to acceptance-test it.
+
+databases:
+  - name: birthday-db
+    plan: free
+    databaseName: birthday
+    user: birthday
+    region: ohio
