@@ -102,7 +102,7 @@ use, so a leaked UAT token is worthless against the real site.
 4. **Apply.** The API starts with:
 
    ```sh
-   npx prisma migrate deploy && node dist/seed/run-seed.js && node dist/main.js
+   npm run start:migrate-seed
    ```
 
    The free plan has neither a pre-deploy command nor shell access, so the migration and the

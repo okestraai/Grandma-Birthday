@@ -8,6 +8,7 @@
     "start": "node dist/main.js",
     "start:dev": "nest start --watch",
     "start:prod": "node dist/main.js",
+    "start:migrate-seed": "prisma migrate deploy && node dist/seed/run-seed.js && node dist/main.js",
     "typecheck": "tsc --noEmit -p tsconfig.json",
     "prisma:generate": "prisma generate",
     "db:migrate": "prisma migrate deploy",

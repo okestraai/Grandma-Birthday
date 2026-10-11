@@ -48,8 +48,14 @@ services:
     # run-seed.js is safe to leave here permanently: with SEED_DEMO=false it only creates
     # SEED_ADMIN_EMAIL if that user does not already exist, and does nothing otherwise.
     # Once you have signed in successfully you can delete the SEED_ADMIN_* variables below
-    # and drop "node dist/seed/run-seed.js &&" to save a few seconds on every cold start.
-    dockerCommand: sh -c "npx prisma migrate deploy && node dist/seed/run-seed.js && node dist/main.js"
+    # and switch this back to the image's default (node dist/main.js) to save a few
+    # seconds on every cold start.
+    #
+    # It has to be ONE command: Render executes dockerCommand as an argv list without a
+    # shell, so "a && b" would pass "&&" to the program as a literal argument (verified -
+    # it runs the migration and then exits). The chaining therefore lives inside the
+    # start:migrate-seed npm script in apps/api/package.json, which npm runs via a shell.
+    dockerCommand: npm run start:migrate-seed
     # Checks the database only. /api/health/ready also checks Azure Blob Storage - switch to
     # it once AZURE_STORAGE_CONNECTION_STRING is set, so a bad storage config fails the deploy.
     healthCheckPath: /api/health
