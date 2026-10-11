@@ -754,6 +754,12 @@ export interface ReorderRequest {
 
 export interface AdminCelebrant extends Omit<Celebrant, 'age'> {
   portraitMediaId: UUID | null;
+  /**
+   * The age the celebration is for, as entered by an admin. Null means nobody has set
+   * one yet, and `age` falls back to the age reached on the event date.
+   */
+  celebrationAge: number | null;
+  /** What the public site shows: `celebrationAge` when set, otherwise derived. */
   age: number | null;
 }
 

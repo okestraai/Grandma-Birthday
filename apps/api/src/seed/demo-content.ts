@@ -47,6 +47,8 @@ export const DEMO_CELEBRANT = {
   preferredName: 'Margaret',
   honorific: 'Dr.',
   birthDate: new Date('1956-11-21T00:00:00Z'),
+  // Entered rather than derived: the party is not always held on the birthday.
+  celebrationAge: 70,
   birthPlace: 'Enugu, Nigeria',
   heroHeadline: 'Years of Life. Love. Legacy.',
   introduction:

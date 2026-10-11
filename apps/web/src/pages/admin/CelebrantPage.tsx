@@ -31,6 +31,15 @@ const schema = z.object({
     .string()
     .refine((v) => v === '' || /^\d{4}-\d{2}-\d{2}$/.test(v), 'Use a full date.')
     .refine((v) => v === '' || v <= new Date().toISOString().slice(0, 10), 'The birth date cannot be in the future.'),
+  // Kept as a string so the input can be cleared; '' means "not set".
+  celebrationAge: z
+    .string()
+    .refine((v) => v === '' || /^\d{1,3}$/.test(v.trim()), 'Enter a whole number.')
+    .refine((v) => {
+      if (v === '') return true;
+      const n = Number(v);
+      return n >= 1 && n <= 130;
+    }, 'Enter an age between 1 and 130.'),
   birthPlace: optionalText(150),
   heroHeadline: optionalText(200),
   introduction: optionalText(2000),
@@ -52,6 +61,7 @@ function toForm(c: AdminCelebrant): FormValues {
     preferredName: c.preferredName,
     honorific: c.honorific ?? '',
     birthDate: c.birthDate ?? '',
+    celebrationAge: c.celebrationAge === null ? '' : String(c.celebrationAge),
     birthPlace: c.birthPlace ?? '',
     heroHeadline: c.heroHeadline ?? '',
     introduction: c.introduction ?? '',
@@ -71,6 +81,7 @@ function toRequest(v: FormValues): UpdateCelebrantRequest {
     preferredName: v.preferredName.trim(),
     honorific: nullIfBlank(v.honorific),
     birthDate: v.birthDate || null,
+    celebrationAge: v.celebrationAge.trim() === '' ? null : Number(v.celebrationAge),
     birthPlace: nullIfBlank(v.birthPlace),
     heroHeadline: nullIfBlank(v.heroHeadline),
     introduction: nullIfBlank(v.introduction),
@@ -177,7 +188,7 @@ function CelebrantForm({ celebrant }: { celebrant: AdminCelebrant }) {
                 label="Date of birth"
                 htmlFor="celebrant-birthDate"
                 error={errors.birthDate?.message}
-                hint="Used to work out the age being celebrated."
+                hint="Shown on the biography page. Only used for the age when none is entered."
               >
                 <AInput
                   id="celebrant-birthDate"
@@ -187,18 +198,24 @@ function CelebrantForm({ celebrant }: { celebrant: AdminCelebrant }) {
                   {...register('birthDate')}
                 />
               </AField>
-              <div>
-                <p className="mb-1 text-[13px] font-medium text-navy" id="celebrant-age-label">
-                  Age being celebrated
-                </p>
-                <p
-                  aria-labelledby="celebrant-age-label"
-                  className="flex h-10 items-center rounded-lg border border-dashed border-navy/15 bg-cream/40 px-3 text-sm tabular-nums text-navy md:h-9"
-                >
-                  {saved.age ?? '—'}
-                </p>
-                <p className="mt-1 text-xs text-muted">Worked out from the birth date and the event date after saving.</p>
-              </div>
+              <AField
+                label="Age being celebrated"
+                htmlFor="celebrant-celebrationAge"
+                error={errors.celebrationAge?.message}
+                hint="Shown everywhere the site gives the age: the hero, the header, the footer and the life-story stats. Leave it empty to work it out from the birth date instead."
+              >
+                <AInput
+                  id="celebrant-celebrationAge"
+                  type="number"
+                  inputMode="numeric"
+                  min={1}
+                  max={130}
+                  placeholder={saved.age === null ? 'e.g. 70' : String(saved.age)}
+                  aria-invalid={!!errors.celebrationAge}
+                  aria-describedby="celebrant-celebrationAge-msg"
+                  {...register('celebrationAge')}
+                />
+              </AField>
             </div>
           </Panel>
 

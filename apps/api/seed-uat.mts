@@ -84,7 +84,8 @@ async function main(): Promise<void> {
   const c = DEMO_CELEBRANT;
   await api('PUT', '/admin/celebrant', {
     fullName: c.fullName, preferredName: c.preferredName, honorific: c.honorific,
-    birthDate: iso(c.birthDate), birthPlace: c.birthPlace, heroHeadline: c.heroHeadline,
+    birthDate: iso(c.birthDate), celebrationAge: c.celebrationAge,
+    birthPlace: c.birthPlace, heroHeadline: c.heroHeadline,
     introduction: c.introduction, biography: c.biography, quote: c.quote,
     quoteAttribution: c.quoteAttribution, achievements: c.achievements, values: c.values,
   });

@@ -215,6 +215,9 @@ model Celebrant {
   preferredName   String    @map("preferred_name")
   honorific       String?
   birthDate       DateTime? @map("birth_date") @db.Date
+  /// The age the celebration is for, entered by an admin. Falls back to the age reached
+  /// on the event date when it is null, so existing data keeps working.
+  celebrationAge  Int?      @map("celebration_age")
   birthPlace      String?   @map("birth_place")
   heroHeadline    String?   @map("hero_headline")
   introduction    String?

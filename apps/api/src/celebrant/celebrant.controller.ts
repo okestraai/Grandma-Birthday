@@ -1,6 +1,6 @@
 import { Body, Controller, Get, Put, Req } from '@nestjs/common';
 import { ApiCookieAuth, ApiPropertyOptional, ApiTags } from '@nestjs/swagger';
-import { ArrayMaxSize, IsArray, IsISO8601, IsOptional, IsString, IsUUID, MaxLength, MinLength, ValidateIf } from 'class-validator';
+import { ArrayMaxSize, IsArray, IsInt, IsISO8601, IsOptional, IsString, IsUUID, Max, MaxLength, Min, MinLength, ValidateIf } from 'class-validator';
 import type { AdminCelebrant, Celebrant } from '@birthday/types';
 import { Public, RequirePermissions } from '../common/decorators/auth.decorators';
 import { PublicCacheHeaders } from '../common/decorators/cache.decorators';
@@ -22,6 +22,8 @@ class UpdateCelebrantDto {
   @ApiPropertyOptional({ nullable: true }) @opt(40) honorific?: string | null;
   @ApiPropertyOptional({ nullable: true, example: '1956-11-21' })
   @IsOptional() @ValidateIf((_, v) => v !== null) @IsISO8601({ strict: true }) birthDate?: string | null;
+  @ApiPropertyOptional({ nullable: true, example: 70, description: 'The age being celebrated. Used everywhere the site shows the age. Null falls back to the age reached on the event date.' })
+  @IsOptional() @ValidateIf((_, v) => v !== null) @IsInt() @Min(1) @Max(130) celebrationAge?: number | null;
   @ApiPropertyOptional({ nullable: true }) @opt(150) birthPlace?: string | null;
   @ApiPropertyOptional({ nullable: true }) @opt(200) heroHeadline?: string | null;
   @ApiPropertyOptional({ nullable: true }) @opt(2000) introduction?: string | null;

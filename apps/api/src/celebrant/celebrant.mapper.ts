@@ -19,7 +19,10 @@ export function toPublicCelebrant(c: Celebrant & { portraitMedia: PublicMediaRow
     honorific: c.honorific,
     birthDate: c.birthDate ? c.birthDate.toISOString().slice(0, 10) : null,
     birthPlace: c.birthPlace,
-    age: ageAt(c.birthDate, eventDate),
+    // An admin-entered age wins. A birthday party is not always held on the birthday, so
+    // deriving it from the birth date can be a year out (someone turning 70 next month is
+    // still 69 today). Falls back to the derived age when nobody has set one.
+    age: c.celebrationAge ?? ageAt(c.birthDate, eventDate),
     heroHeadline: c.heroHeadline,
     introduction: c.introduction,
     biography: c.biography,
@@ -32,5 +35,7 @@ export function toPublicCelebrant(c: Celebrant & { portraitMedia: PublicMediaRow
 }
 
 export function toAdminCelebrant(c: Celebrant & { portraitMedia: PublicMediaRow | null }, eventDate: Date): AdminCelebrant {
-  return { ...toPublicCelebrant(c, eventDate), portraitMediaId: c.portraitMediaId };
+  // celebrationAge is the raw stored value, so the admin form can tell "not set" apart
+  // from a value that happens to match the derived age.
+  return { ...toPublicCelebrant(c, eventDate), portraitMediaId: c.portraitMediaId, celebrationAge: c.celebrationAge };
 }
