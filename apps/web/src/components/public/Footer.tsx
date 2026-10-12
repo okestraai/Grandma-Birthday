@@ -3,7 +3,7 @@ import { Mail, MapPin, Phone } from 'lucide-react';
 import type { SiteOverview } from '@birthday/types';
 import { formatEventDate, formatEventTime } from '@/lib/utils';
 import { celebrantName } from '@/lib/public-api';
-import { NAV_LINKS } from './nav';
+import { navLinksFor } from './nav';
 import { celebrationDates, eventTimes } from './event/event-helpers';
 import { GoldRule } from './section';
 import { SeventyWatermark } from './seventy';
@@ -97,7 +97,7 @@ export function Footer({ site }: { site: SiteOverview | undefined }) {
           <nav aria-label="Footer">
             <h2 className="text-[11px] font-medium uppercase tracking-[0.3em] text-gold">Explore</h2>
             <ul className="mt-4 grid grid-cols-2 gap-x-6 gap-y-2.5 text-sm md:grid-cols-1">
-              {NAV_LINKS.map((link) => (
+              {navLinksFor(site).map((link) => (
                 <li key={link.to}>
                   <Link to={link.to} className="text-ivory/80 transition-colors hover:text-gold">
                     {link.label}

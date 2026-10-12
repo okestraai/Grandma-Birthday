@@ -4,7 +4,7 @@ import { AnimatePresence, motion } from 'motion/react';
 import { Dialog } from 'radix-ui';
 import { X } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { NAV_LINKS } from './nav';
+import type { NavItem } from './nav';
 import { EASE } from './reveal';
 
 /**
@@ -16,10 +16,12 @@ export default function MobileMenu({
   open,
   onOpenChange,
   returnFocusTo,
+  links,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   returnFocusTo: RefObject<HTMLButtonElement | null>;
+  links: readonly NavItem[];
 }) {
   return (
     <Dialog.Root open={open} onOpenChange={onOpenChange}>
@@ -60,7 +62,7 @@ export default function MobileMenu({
                 </div>
                 <nav aria-label="Mobile" className="relative flex-1 overflow-y-auto px-5 pb-8">
                   <ul className="border-t border-gold/20">
-                    {NAV_LINKS.map((link, i) => (
+                    {links.map((link, i) => (
                       <motion.li
                         key={link.to}
                         className="border-b border-gold/15"
@@ -102,7 +104,7 @@ export default function MobileMenu({
                   <motion.div
                     initial={{ opacity: 0, y: 16 }}
                     animate={{ opacity: 1, y: 0 }}
-                    transition={{ duration: 0.5, ease: EASE, delay: 0.2 + NAV_LINKS.length * 0.05 }}
+                    transition={{ duration: 0.5, ease: EASE, delay: 0.2 + links.length * 0.05 }}
                   >
                     <Link
                       to="/rsvp"

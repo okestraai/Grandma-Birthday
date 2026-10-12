@@ -12,6 +12,7 @@ import type { ProgrammeItem } from '../generated/prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { AuditService } from '../audit/audit.service';
 import { EventsService, toPublicEvent } from '../events/events.service';
+import { SettingsService } from '../settings/settings.service';
 
 const HHMM = /^([01]\d|2[0-3]):[0-5]\d$/;
 const DATE = /^\d{4}-(0[1-9]|1[0-2])-(0[1-9]|[12]\d|3[01])$/;
@@ -54,13 +55,15 @@ export class ProgrammeController {
     private readonly prisma: PrismaService,
     private readonly events: EventsService,
     private readonly audit: AuditService,
+    private readonly settings: SettingsService,
   ) {}
 
   @Get('programme')
   @Public()
   @PublicCacheHeaders()
-  @ApiOperation({ summary: 'Programme items grouped by public event; events without items are left out' })
+  @ApiOperation({ summary: 'Programme items grouped by public event; events without items are left out. Empty while an admin hides the programme' })
   async list(): Promise<ProgrammeGroup[]> {
+    if (!(await this.settings.getCelebration()).programmeVisible) return [];
     const [events, items] = await Promise.all([
       this.events.listPublic(),
       this.prisma.programmeItem.findMany({ where: { event: { isPublic: true } }, orderBy: ORDER }),

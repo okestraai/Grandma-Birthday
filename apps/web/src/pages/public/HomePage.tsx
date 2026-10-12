@@ -14,6 +14,7 @@ import {
   TestimonialsSection,
 } from '@/components/public/home/sections';
 import { ScrollScene, VelocityBand } from '@/components/public/motion';
+import { programmeShown } from '@/components/public/nav';
 import { eventJsonLd, personJsonLd, siteImagePath } from '@/components/public/jsonld';
 import { celebrationDates, celebrationPlace, hasSeveralEvents } from '@/components/public/event/event-helpers';
 
@@ -59,7 +60,7 @@ export default function HomePage() {
       <MomentsMarquee />
       {/* One event: its details, as before. Several: a short schedule. */}
       <ScrollScene>{several ? <ScheduleSection site={site} /> : <EventSection site={site} />}</ScrollScene>
-      <ProgrammeSection timezone={site.celebration.timezone} />
+      {programmeShown(site) && <ProgrammeSection timezone={site.celebration.timezone} />}
       <ScrollScene>
         <TestimonialsSection />
       </ScrollScene>

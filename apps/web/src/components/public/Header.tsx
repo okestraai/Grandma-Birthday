@@ -5,7 +5,7 @@ import { Menu } from 'lucide-react';
 import type { SiteOverview } from '@birthday/types';
 import { cn } from '@/lib/utils';
 import { apiUrl } from '@/lib/api';
-import { NAV_LINKS } from './nav';
+import { navLinksFor } from './nav';
 import { HeaderGlass } from './effects/HeaderGlass';
 import { MagneticLink } from './motion';
 
@@ -57,6 +57,7 @@ export function Header({ site, overHero }: { site: SiteOverview | undefined; ove
   const menuButton = useRef<HTMLButtonElement>(null);
   const location = useLocation();
   const transparent = overHero && !scrolled && !open;
+  const links = navLinksFor(site);
 
   // Close the menu on navigation.
   useEffect(() => setOpen(false), [location.pathname]);
@@ -83,7 +84,7 @@ export function Header({ site, overHero }: { site: SiteOverview | undefined; ove
           <div className="relative">
             {overHero && <HeaderGlass visible={transparent} />}
             <ul className="relative flex items-center gap-7">
-              {NAV_LINKS.map((link) => (
+              {links.map((link) => (
                 <li key={link.to}>
                   <NavLink to={link.to} end={link.to === '/'} className={linkClass}>
                     {({ isActive }) => (
@@ -130,7 +131,7 @@ export function Header({ site, overHero }: { site: SiteOverview | undefined; ove
           </button>
           {menuLoaded && (
             <Suspense fallback={null}>
-              <MobileMenu open={open} onOpenChange={setOpen} returnFocusTo={menuButton} />
+              <MobileMenu open={open} onOpenChange={setOpen} returnFocusTo={menuButton} links={links} />
             </Suspense>
           )}
         </div>

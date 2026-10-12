@@ -117,7 +117,8 @@ export class CelebrationController {
         rsvpDeadline: dto.rsvpDeadline === undefined ? undefined : dto.rsvpDeadline === null ? null : new Date(dto.rsvpDeadline),
       },
     });
-    await this.audit.record(requestMeta(req), { action: 'ADMIN_CHANGED_EVENT_SETTINGS', entityType: 'Celebration', entityId: '1', metadata: { fields: Object.keys(dto) } });
+    // Only the fields sent: the DTO class also lists the ones left out.
+    await this.audit.record(requestMeta(req), { action: 'ADMIN_CHANGED_EVENT_SETTINGS', entityType: 'Celebration', entityId: '1', metadata: { fields: Object.keys(dto).filter((k) => dto[k as keyof UpdateCelebrationDto] !== undefined) } });
     return this.toAdmin(updated, confirmed, await this.events.list());
   }
 
@@ -226,6 +227,7 @@ export class CelebrationController {
       contactName: c.contactName,
       contactEmail: c.contactEmail,
       contactPhone: c.contactPhone,
+      programmeVisible: c.programmeVisible,
       rsvp: this.settings.availability(c, confirmedPeople, availability),
     };
   }
@@ -240,6 +242,7 @@ export class CelebrationController {
       contactName: c.contactName,
       contactEmail: c.contactEmail,
       contactPhone: c.contactPhone,
+      programmeVisible: c.programmeVisible,
       capacity: c.capacity,
       rsvpOpen: c.rsvpOpen,
       rsvpMode: c.rsvpMode,

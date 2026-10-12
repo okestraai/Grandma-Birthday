@@ -13,7 +13,7 @@ Admin routes use cookie auth. Every `POST`, `PUT`, `PATCH` and `DELETE` from the
 | Method | Path | Returns / body |
 |---|---|---|
 | GET | `/health` | `{ status: 'ok' }` |
-| GET | `/site` | `SiteOverview`: the celebration, its public events in display order, celebrant, branding |
+| GET | `/site` | `SiteOverview`: the celebration, its public events in display order, celebrant, branding. `celebration.programmeVisible` says whether the site shows the programme |
 | GET | `/celebration` | `PublicCelebration` (replaces `/event`) |
 | GET | `/celebrant` | `Celebrant` |
 | GET | `/timeline` | `TimelineEntry[]` (published only) |
@@ -22,7 +22,7 @@ Admin routes use cookie auth. Every `POST`, `PUT`, `PATCH` and `DELETE` from the
 | GET | `/albums/:slug` | `AlbumDetail` |
 | GET | `/media?album=<slug>&kind=&page=&pageSize=` | `Paginated<PublicMedia>` (approved only) |
 | GET | `/media/:id/:variant` | file bytes. `variant` = `thumb` (400px webp), `medium` (1600px webp), `original`. Supports `Range`. |
-| GET | `/programme` | `ProgrammeGroup[]`: items grouped by public event, in event order. Events without items are left out |
+| GET | `/programme` | `ProgrammeGroup[]`: items grouped by public event, in event order. Events without items are left out. Empty (`[]`) while the programme is hidden |
 | GET | `/testimonials/public?page=&pageSize=` | `Paginated<PublicTestimonial>` (approved AND public; featured first) |
 | POST | `/testimonials` | multipart `SubmitTestimonialFields` + `photo?`, `video?` → `SubmitTestimonialResult` |
 | GET | `/rsvp/form` | `RsvpFormConfig`. `events` lists the public events that take replies, each with `invitedCategoryIds` so the form can show only the events for the category the guest picks |
@@ -33,7 +33,7 @@ Admin routes use cookie auth. Every `POST`, `PUT`, `PATCH` and `DELETE` from the
 | GET | `/uploads/:token` | `UploadPageConfig` |
 | POST | `/uploads/:token` | multipart `files` (repeat), `uploaderName?`, `message?` → `UploadResult` |
 | GET | `/seo?path=/gallery/childhood` | `SeoMetadata` |
-| GET | `/sitemap.xml` | XML sitemap |
+| GET | `/sitemap.xml` | XML sitemap. Leaves out `/programme` while the programme is hidden; `/seo?path=/programme` then has `noindex: true` |
 
 ## Auth
 
@@ -63,7 +63,7 @@ Check-in is per event. `eventId` may be left out only when there is one event; w
 | Method | Path | Returns / body |
 |---|---|---|
 | GET | `/admin/dashboard` | `DashboardStats` |
-| GET, PUT | `/admin/celebration` | `AdminCelebration` / `UpdateCelebrationRequest` (was `/admin/event`; dates and venues moved to events). Includes `rsvpScope` and `checkInScope` (see "Several events") |
+| GET, PUT | `/admin/celebration` | `AdminCelebration` / `UpdateCelebrationRequest` (was `/admin/event`; dates and venues moved to events). Includes `rsvpScope` and `checkInScope` (see "Several events"), and `programmeVisible` (default `true`; set on the Programme admin page) |
 | GET, PUT | `/admin/celebration/allocations` | `CapacityAllocations` / `UpdateCapacityAllocationsRequest` (celebration capacity split across guest categories) |
 | GET, POST | `/admin/events` | `AdminEvent[]` / `UpsertEventRequest` → `AdminEvent` |
 | PUT | `/admin/events/reorder` | `ReorderRequest` |
@@ -130,4 +130,4 @@ Check-in is per event. `eventId` may be left out only when there is one event; w
 | `rsvpScope` (celebration) | `PER_EVENT` (default): guests tick events, with companions per event. `WHOLE_CELEBRATION`: one yes or no; a yes is stored as attending every event the guest may reply to, with all their companions, so event capacity, counts, invitations and emails work as before. `events` in the request is ignored, and a full event refuses the whole reply (`EVENT_FULL`). `RsvpFormConfig.rsvpScope` tells the form which to show. |
 | Switching `rsvpScope` | Replies already made keep their events. Switching to `WHOLE_CELEBRATION` does not add events to earlier replies; switching back does not remove any. A guest who updates their reply is saved under the current choice. |
 | `checkInScope` (celebration) | `PER_EVENT` (default): staff choose the event; one check-in per guest per event. `ONCE`: `eventId` is ignored, the check-in is recorded against the event in progress (else the next, else the last), and a guest checked in at any event is `ALREADY_CHECKED_IN` everywhere. The unique index is per event, so this rule is checked in the service under an advisory lock. Reversing works as before. `/checkin/recent` then counts guests across all events (each person once). |
-| Audit | Event changes are logged as `ADMIN_CHANGED_EVENT` (entity `Event`); celebration settings as `ADMIN_CHANGED_EVENT_SETTINGS` (entity `Celebration`). |
+| Audit | Event changes are logged as `ADMIN_CHANGED_EVENT` (entity `Event`); celebration settings as `ADMIN_CHANGED_EVENT_SETTINGS` (entity `Celebration`), with the names of the fields sent. |

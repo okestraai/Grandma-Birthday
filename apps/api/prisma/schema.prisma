@@ -152,6 +152,8 @@ model Celebration {
   defaultCompanions  Int       @default(1) @map("default_companions")
   maxCompanions      Int       @default(4) @map("max_companions")
   allowCompanions    Boolean   @default(true) @map("allow_companions")
+  // Off: the public site hides the programme. Admins still edit it.
+  programmeVisible   Boolean   @default(true) @map("programme_visible")
   updatedAt          DateTime  @updatedAt @map("updated_at") @db.Timestamptz(3)
 
   @@map("event")

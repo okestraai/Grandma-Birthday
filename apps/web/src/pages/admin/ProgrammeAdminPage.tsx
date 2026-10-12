@@ -1,13 +1,14 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { ArrowDownWideNarrow, MapPin, Mic, Pencil, Plus, Trash2 } from 'lucide-react';
-import type { ProgrammeItem } from '@birthday/types';
+import type { AdminCelebration, ProgrammeItem } from '@birthday/types';
 import { api } from '@/lib/api';
 import { adminKeys, moveItem, useAdminMutation } from '@/lib/admin-api';
 import { celebrationQuery, eventsQuery, programmeEventId, programmeQuery } from '@/lib/admin-queries';
+import { publicKeys } from '@/lib/public-api';
 import { formatClock } from '@/lib/utils';
-import { AButton, FilterTabs, IconButton, PageHeader, Panel } from '@/components/admin/ui';
+import { AButton, FilterTabs, IconButton, PageHeader, Panel, SwitchRow } from '@/components/admin/ui';
 import { DataTable, type Column } from '@/components/admin/data-table';
 import { ReorderButtons } from '@/components/admin/misc';
 import { Confirm } from '@/components/admin/overlays';
@@ -39,6 +40,16 @@ export default function ProgrammeAdminPage() {
   const programme = programmeQuery(eventId ?? undefined);
   const query = useQuery({ ...programme, enabled: !!eventId });
   const items = useMemo(() => (query.data ? [...query.data].sort((a, b) => a.sortOrder - b.sortOrder) : undefined), [query.data]);
+
+  const queryClient = useQueryClient();
+  // Saves at once, like the other on/off switches; the public pages refetch.
+  const visibility = useAdminMutation<AdminCelebration, boolean>({
+    mutationFn: (programmeVisible) => api.put<AdminCelebration>('/admin/celebration', { programmeVisible }),
+    invalidate: [adminKeys.celebration, publicKeys.all],
+    success: (data) => (data.programmeVisible ? 'The programme is now shown on the website.' : 'The programme is now hidden from the website.'),
+    onSuccess: (data) => queryClient.setQueryData(adminKeys.celebration, data),
+  });
+  const programmeVisible = visibility.isPending ? visibility.variables : (celebration.data?.programmeVisible ?? true);
 
   const [dialog, setDialog] = useState<DialogState>(null);
   const [deleting, setDeleting] = useState<ProgrammeItem | null>(null);
@@ -128,6 +139,15 @@ export default function ProgrammeAdminPage() {
         }
         actions={addButton}
       />
+      <Panel className="mb-4" bodyClassName="py-1">
+        <SwitchRow
+          label="Show the programme on the website"
+          description="When off, guests see no programme and no links to it. You can still edit it here."
+          checked={programmeVisible}
+          disabled={!celebration.data || visibility.isPending}
+          onCheckedChange={(on) => visibility.mutate(on)}
+        />
+      </Panel>
       {multiple && events.data && (
         <FilterTabs
           label="Event"

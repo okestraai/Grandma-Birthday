@@ -41,6 +41,7 @@ export function testSite(events: PublicEvent[] = [DINNER]): SiteOverview {
       contactName: 'Ngozi',
       contactEmail: 'family@example.com',
       contactPhone: null,
+      programmeVisible: true,
       rsvp: { open: true, mode: 'OPEN', deadline: null, closedReason: null },
     },
     events,

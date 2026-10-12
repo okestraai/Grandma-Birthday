@@ -183,6 +183,11 @@ export interface PublicCelebration {
   contactName: string | null;
   contactEmail: string | null;
   contactPhone: string | null;
+  /**
+   * False when an admin has hidden the programme: GET /programme is then empty and the site drops
+   * its programme links. Treat a missing value (an older saved copy) as true.
+   */
+  programmeVisible: boolean;
   rsvp: RsvpAvailability;
 }
 

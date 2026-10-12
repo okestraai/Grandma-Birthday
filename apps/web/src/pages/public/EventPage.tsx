@@ -15,7 +15,6 @@ import {
   calendarEventsFromSite,
   celebrationDates,
   celebrationPlace,
-  directionsHref,
   hasSeveralEvents,
   rsvpClosedMessage,
 } from '@/components/public/event/event-helpers';
@@ -23,21 +22,9 @@ import { eventJsonLd, siteImagePath } from '@/components/public/jsonld';
 import { SeventyWatermark } from '@/components/public/seventy';
 import { Medallion } from '@/components/public/effects/Medallion';
 import { VenueMap } from '@/components/public/event/VenueMap';
+import { DirectionsLink } from '@/components/public/event/DirectionsLink';
+import { programmeShown } from '@/components/public/nav';
 import { MagneticLink, SplitText, TiltCard } from '@/components/public/motion';
-
-function DirectionsLink({ event, className }: { event: PublicEvent; className?: string }) {
-  const directions = directionsHref(event);
-  return (
-    <a
-      href={directions.href}
-      {...(directions.newTab ? { target: '_blank', rel: 'noopener noreferrer' } : {})}
-      className={className}
-    >
-      Get directions <ArrowRight className="size-4" aria-hidden />
-      {directions.newTab && <span className="sr-only">(opens in a new tab)</span>}
-    </a>
-  );
-}
 
 /** One event on a site with several: its details, directions and its own calendar entry. */
 function EventCard({ site, event, index }: { site: SiteOverview; event: PublicEvent; index: number }) {
@@ -238,15 +225,17 @@ export default function EventPage() {
                 </div>
               </Reveal>
             )}
-            <Reveal delay={0.15} x={48} y={0}>
-              <Link to="/programme" className="group flex items-center justify-between rounded-[1.75rem] border border-gold/30 bg-cream px-8 py-6 transition-colors hover:border-gold">
-                <span>
-                  <span className="block text-[11px] font-medium uppercase tracking-[0.3em] text-gold-rich">{several ? 'At each event' : 'On the night'}</span>
-                  <span className="mt-1 block font-display text-xl text-navy">View the programme</span>
-                </span>
-                <ArrowRight className="size-5 text-gold-rich transition-transform group-hover:translate-x-1" aria-hidden />
-              </Link>
-            </Reveal>
+            {programmeShown(site) && (
+              <Reveal delay={0.15} x={48} y={0}>
+                <Link to="/programme" className="group flex items-center justify-between rounded-[1.75rem] border border-gold/30 bg-cream px-8 py-6 transition-colors hover:border-gold">
+                  <span>
+                    <span className="block text-[11px] font-medium uppercase tracking-[0.3em] text-gold-rich">{several ? 'At each event' : 'On the night'}</span>
+                    <span className="mt-1 block font-display text-xl text-navy">View the programme</span>
+                  </span>
+                  <ArrowRight className="size-5 text-gold-rich transition-transform group-hover:translate-x-1" aria-hidden />
+                </Link>
+              </Reveal>
+            )}
           </aside>
         </div>
       </section>

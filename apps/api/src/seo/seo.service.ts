@@ -152,7 +152,8 @@ export class SeoService {
           jsonLd: this.eventsLd(ctx),
         };
       case '/programme':
-        return { ...base, title: title('Programme'), description: `The order of events for ${ctx.celebration.name}.` };
+        // Hidden by an admin: the page says so, and search engines should not list it.
+        return { ...base, title: title('Programme'), description: `The order of events for ${ctx.celebration.name}.`, noindex: !ctx.celebration.programmeVisible };
       case '/testimonials':
         return { ...base, title: title('Tributes'), description: `Birthday messages and tributes for ${ctx.celebrant.fullName}.` };
       case '/rsvp':
@@ -178,9 +179,13 @@ export class SeoService {
   }
 
   async sitemap(): Promise<string> {
-    const albums = await this.prisma.album.findMany({ where: { isPublished: true, media: { some: { status: 'APPROVED' } } }, select: { slug: true, updatedAt: true } });
+    const [albums, celebration] = await Promise.all([
+      this.prisma.album.findMany({ where: { isPublished: true, media: { some: { status: 'APPROVED' } } }, select: { slug: true, updatedAt: true } }),
+      this.settings.getCelebration(),
+    ]);
     const today = new Date().toISOString().slice(0, 10);
-    const pages = ['/', '/about', '/story', '/family', '/gallery', '/event', '/programme', '/testimonials', '/rsvp'].map((p) => ({ loc: this.abs(p), lastmod: today }));
+    const paths = ['/', '/about', '/story', '/family', '/gallery', '/event', ...(celebration.programmeVisible ? ['/programme'] : []), '/testimonials', '/rsvp'];
+    const pages = paths.map((p) => ({ loc: this.abs(p), lastmod: today }));
     const albumPages = albums.map((a) => ({ loc: this.abs(`/gallery/${a.slug}`), lastmod: a.updatedAt.toISOString().slice(0, 10) }));
     const urls = [...pages, ...albumPages].map((u) => `  <url><loc>${escapeHtml(u.loc)}</loc><lastmod>${u.lastmod}</lastmod></url>`).join('\n');
     return `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${urls}\n</urlset>\n`;

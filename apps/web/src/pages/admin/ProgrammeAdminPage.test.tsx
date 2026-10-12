@@ -92,4 +92,25 @@ describe('ProgrammeAdminPage', () => {
     expect((await screen.findAllByText('Opening hymn')).length).toBeGreaterThan(0);
     expect(screen.queryByRole('group', { name: 'Event' })).not.toBeInTheDocument();
   });
+
+  it('hides and shows the programme on the website with one switch, items still editable', async () => {
+    let saved = { timezone: 'Africa/Lagos', programmeVisible: true };
+    const get = vi.mocked(api.get).getMockImplementation()!;
+    vi.mocked(api.get).mockImplementation(async (path: string, ...rest) => (path === '/admin/celebration' ? (saved as never) : get(path, ...rest)));
+    vi.mocked(api.put).mockImplementation(async (_path, body) => (saved = { ...saved, ...(body as object) }) as never);
+    renderAt('/admin/programme');
+    const toggle = await screen.findByRole('switch', { name: 'Show the programme on the website' });
+    await waitFor(() => expect(toggle).toBeEnabled());
+    expect(toggle).toBeChecked();
+    expect(screen.getByText(/You can still edit it here/)).toBeInTheDocument();
+
+    fireEvent.click(toggle);
+    await waitFor(() => expect(api.put).toHaveBeenCalledWith('/admin/celebration', { programmeVisible: false }));
+    await waitFor(() => expect(toggle).not.toBeChecked());
+    expect(screen.getAllByRole('button', { name: 'Add item' })[0]).toBeEnabled();
+
+    fireEvent.click(toggle);
+    await waitFor(() => expect(api.put).toHaveBeenLastCalledWith('/admin/celebration', { programmeVisible: true }));
+    await waitFor(() => expect(toggle).toBeChecked());
+  });
 });

@@ -44,4 +44,5 @@ export class UpdateCelebrationDto {
   @ApiPropertyOptional() @IsOptional() @IsInt() @Min(0) @Max(20) defaultCompanions?: number;
   @ApiPropertyOptional() @IsOptional() @IsInt() @Min(0) @Max(20) maxCompanions?: number;
   @ApiPropertyOptional() @IsOptional() @IsBoolean() allowCompanions?: boolean;
+  @ApiPropertyOptional({ description: 'Show the programme on the public site' }) @IsOptional() @IsBoolean() programmeVisible?: boolean;
 }

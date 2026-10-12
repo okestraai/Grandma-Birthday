@@ -25,7 +25,7 @@ export async function createTestApp(): Promise<TestContext> {
   configureApp(app, loadConfig());
   await app.init();
   const prisma = app.get(PrismaService);
-  return { app, prisma, http: () => request.agent(app.getHttpServer()) };
+  return { app, prisma, http: () => request.agent(app.getHttpServer()).use((req: any) => req.on('response', (res: any) => { if (res.status === 404) console.error('TEMP404', req.method, req.url, JSON.stringify(res.headers), String(res.text).slice(0, 200)); })) };
 }
 
 let passwordHash: Promise<string> | null = null;

@@ -20,6 +20,7 @@ const celebration: AdminCelebration = {
   contactName: null,
   contactEmail: null,
   contactPhone: null,
+  programmeVisible: true,
   capacity: 300,
   rsvpOpen: true,
   rsvpMode: 'OPEN',

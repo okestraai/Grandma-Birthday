@@ -23,6 +23,7 @@ export const site: SiteOverview = {
     "contactName": "Ngozi Okonkwo-Bello",
     "contactEmail": "celebration@demo.local",
     "contactPhone": "+234 800 000 0070",
+    "programmeVisible": true,
     "rsvp": {
       "open": true,
       "mode": "OPEN",

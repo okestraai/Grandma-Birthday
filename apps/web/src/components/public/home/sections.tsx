@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { Link } from 'react-router';
 import { motion } from 'motion/react';
 import { ArrowRight } from 'lucide-react';
@@ -16,6 +17,8 @@ import { EventDetails } from '../event/EventDetails';
 import { AddToCalendar } from '../event/AddToCalendar';
 import { audienceNote, calendarEventsFromSite, eventTimes, rsvpClosedMessage } from '../event/event-helpers';
 import { ProgrammeTimeline } from '../programme/ProgrammeTimeline';
+import { ProgrammeSwitch } from '../programme/ProgrammeEvents';
+import { groupsWithItems, pickProgrammeGroup, programmeHref } from '../programme/programme-helpers';
 import { ShaderBackdrop } from '../effects/ShaderBackdrop';
 import { TestimonialCarousel } from '../testimonials/TestimonialCarousel';
 
@@ -434,48 +437,51 @@ export function ScheduleSection({ site }: { site: SiteOverview }) {
 
 /* ---------------------------------------------------------------- Programme */
 
+/** First items of the chosen event shown on the home page; the rest are on /programme. */
+const HOME_PROGRAMME_ITEMS = 5;
+
 export function ProgrammeSection({ timezone }: { timezone?: string }) {
   const programme = useProgramme();
-  if ((programme.isError && !programme.data) || programme.data?.length === 0) return null;
-  const groups = programme.data ?? [];
+  const [slug, setSlug] = useState<string | null>(null);
+  const groups = groupsWithItems(programme.data);
+  if ((programme.isError && !programme.data) || (programme.data && groups.length === 0)) return null;
   const several = groups.length > 1;
-  const total = groups.reduce((sum, g) => sum + g.items.length, 0);
-  // One event shows its first six items; several show the first three of each.
-  const limit = several ? 3 : 6;
+  const selected = pickProgrammeGroup(groups, slug);
   return (
     <section aria-labelledby="programme-heading" className="bg-ivory py-20 sm:py-28">
       <div className="container-page">
         <Reveal>
           <SectionHeading dramatic eyebrow={several ? 'Order of events' : 'Order of the evening'} id="programme-heading" title="The programme" />
         </Reveal>
-        <div className="mx-auto mt-14 max-w-2xl">
-          {programme.isPending ? (
+        <div className="mx-auto mt-12 max-w-2xl sm:mt-14">
+          {programme.isPending || !selected ? (
             <div className="space-y-6" aria-hidden>
               {Array.from({ length: 4 }, (_, i) => (
                 <Skeleton key={i} className="h-16" />
               ))}
             </div>
           ) : (
-            <div className="space-y-14">
-              {groups.map((group) => (
-                <div key={group.event.id}>
-                  {several && (
-                    <h3 className="mb-8 text-center font-display text-2xl text-navy">
-                      {group.event.name}
-                      <span className="mt-1 block text-[11px] font-sans uppercase tracking-[0.3em] text-gold-rich">
-                        {formatEventDate(group.event.startsAt, timezone)}
-                      </span>
-                    </h3>
-                  )}
-                  <ProgrammeTimeline items={group.items} limit={limit} eventStart={group.event.startsAt} timezone={timezone} />
-                </div>
-              ))}
-            </div>
+            <ProgrammeSwitch groups={groups} selected={selected} onSelect={setSlug} idPrefix="home-programme" timezone={timezone}>
+              {({ event, items }) => (
+                <>
+                  <p className="mb-10 text-center text-sm text-muted">
+                    <time className="block font-medium text-navy sm:inline" dateTime={event.startsAt}>
+                      {formatEventDate(event.startsAt, timezone)}
+                    </time>
+                    <span aria-hidden className="hidden sm:inline"> · </span>
+                    <span className="whitespace-nowrap">{eventTimes(event, timezone)}</span>
+                    <span aria-hidden> · </span>
+                    {event.venueName}
+                  </p>
+                  <ProgrammeTimeline items={items} limit={HOME_PROGRAMME_ITEMS} eventStart={event.startsAt} timezone={timezone} />
+                </>
+              )}
+            </ProgrammeSwitch>
           )}
         </div>
-        {(total > limit || several) && (
+        {selected && (
           <div className="mt-10 text-center">
-            <MoreLink to="/programme">See the full programme</MoreLink>
+            <MoreLink to={programmeHref(groups, selected.event.slug)}>See the full programme</MoreLink>
           </div>
         )}
       </div>
