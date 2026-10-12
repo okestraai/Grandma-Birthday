@@ -15,7 +15,10 @@ The schema is in `apps/api/prisma/schema.prisma`. Differences from a first-draft
 | **Roles are an enum, not a table.** Permissions per role live in `apps/api/src/common/permissions.ts`. | There are exactly three fixed roles. A table would suggest roles can be edited, which the product does not support. |
 | **No storage-usage table.** Usage is summed from the `media` table (`stored_bytes`). | A running counter can drift from reality after a crash or manual cleanup. A sum cannot. The `stored_bytes` column is indexed. |
 | **`Companion` instead of `GuestPlusOne`.** | Same idea; the word matches the interface text ("accompanying guests"). |
-| **Event, Settings and Celebrant are single-row tables** (`id = 1`, enforced by a check constraint). | There is one celebration. Settings is separate from Event so that storage and branding changes do not touch event details. |
+| **Celebration, Settings and Celebrant are single-row tables** (`id = 1`, enforced by a check constraint). The Prisma model `Celebration` keeps the original table name `event`. | There is one celebration. Settings is separate from Celebration so that storage and branding changes do not touch the RSVP rules. Keeping the table name avoided moving data that did not change. |
+| **A celebration has several events** (`events` table, Prisma model `Event`). Dates, venue, dress code, theme, parking, capacity and invited categories are per event; name, tagline, description, time zone, contact, RSVP rules and overall capacity stay on the celebration. | A wedding-style weekend has a service, a dinner and a brunch, at different places and times, for different guests. The celebration-wide rules are the same for all of them. |
+| **Invited categories, extra invitations and replies per event are join tables** (`event_categories`, `guest_events`, `rsvp_events`). | Foreign keys with cascade deletes keep them clean when a category, guest or event goes. An id array on a row could point at deleted rows. |
+| **One RSVP per guest, plus a row per event attended.** `Rsvp.companionCount` is the number of companions named; each event stores how many of them come. | Dietary needs, answers and the birthday message are about the person, not the event. `ATTENDING` means attending at least one event. |
 | **Invitation tokens are stored as-is, not hashed.** | Admins need to view, print and re-send invitations without changing the QR code a guest may already have printed. Tokens are 256-bit random values; the only access they grant is viewing that one invitation. "Regenerate link" replaces a token when needed. |
 | **Refresh tokens and password-reset tokens are hashed.** | These grant account access, so a database leak must not expose usable values. |
 | **Testimonials have both `isPublic` and `isFeatured`.** | Approval never publishes by itself. `isPublic` is the explicit "Show on public website" choice; `isFeatured` highlights one at the top. A database check stops an unapproved message from being public. |
@@ -26,8 +29,12 @@ The schema is in `apps/api/prisma/schema.prisma`. Differences from a first-draft
 | Rule | How |
 |---|---|
 | A guest cannot bring more companions than allowed | Checked in `RsvpService` against the guest's allowance (or the category default, capped by the event maximum). Returns `COMPANION_LIMIT_EXCEEDED`. |
-| Confirmed people never exceed capacity | RSVPs and admin guest changes take a PostgreSQL advisory lock, then count confirmed people and check. Concurrent RSVPs queue on the lock. Admins may override deliberately; the override is audited. |
-| One check-in per invitation | A partial unique index: `UNIQUE (invitation_id) WHERE reversed_at IS NULL`. Two phones scanning at the same moment produce one check-in and one `ALREADY_CHECKED_IN`. Reversing sets `reversed_at`, which frees the invitation. |
+| Confirmed people never exceed capacity | RSVPs and admin guest changes take a PostgreSQL advisory lock, then count confirmed people and check. Concurrent RSVPs queue on the lock. Admins may override deliberately; the override is audited. One lock covers the celebration, category and event capacities, because a reply touches all three. |
+| Celebration capacity counts people once | A guest attending any event counts as one person plus their named companions, however many events they attend. The capacity is about how many different people come; each event's own capacity covers the size of the room. |
+| Guests only reply to their events | An event with invited categories is offered only to guests in those categories, guests an admin added to it, and guests who already chose it. Checked in `RsvpService` (`chooseEvents`), not just hidden in the form. |
+| Reply and check-in scope are settings | `rsvpScope` and `checkInScope` on the celebration. A whole-celebration reply still writes one `rsvp_events` row per event, so capacity, counts and invitations need no second code path. "Check in once" is enforced in `CheckInService` under an advisory lock, because the unique index is per event. |
+| One check-in per guest per event | A partial unique index: `UNIQUE (guest_id, event_id) WHERE reversed_at IS NULL`. Two phones scanning at the same moment produce one check-in and one `ALREADY_CHECKED_IN`. The same QR code works at every event. Reversing sets `reversed_at`, which frees the guest for that event. |
+| Events with replies are kept | Deleting an event is refused when guests replied to it or were checked in, and for the last event. Hide it and turn off its replies instead, so no guest's answer changes without them knowing. |
 | Revoked invitations cannot be checked in | Checked on verify and again on check-in. |
 | Uploads cannot exceed the quota | Files are processed and stored first; then, under an advisory lock, the quota is checked and the row inserted. If the check fails, the stored files are deleted. |
 | Only approved media are public | The file endpoint returns 404 for anything not approved, unless the viewer has `media:manage`. |
@@ -60,4 +67,5 @@ The schema is in `apps/api/prisma/schema.prisma`. Differences from a first-draft
 - Rate-limit counters are in memory; see the deployment guide for running several API instances.
 - Videos have no generated preview image.
 - Page content (not metadata) is rendered in the browser. Metadata is server-rendered by the included web server.
-- The event is single-tenant: one celebration per deployment.
+- The site is single-tenant: one celebration per deployment, with one or more events.
+- Changing an event's invited categories does not remove replies already made to it.

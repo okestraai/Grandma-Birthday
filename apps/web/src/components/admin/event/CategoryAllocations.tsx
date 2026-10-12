@@ -23,7 +23,7 @@ function toDrafts(data: CapacityAllocations): Drafts {
 const plural = (n: number | undefined, one: string, many = `${one}s`) => `${(n ?? 0).toLocaleString()} ${n === 1 ? one : many}`;
 
 /**
- * Splits the event capacity across guest categories (GET/PUT /admin/event/allocations).
+ * Splits the celebration capacity across guest categories (GET/PUT /admin/celebration/allocations).
  * Every category is sent on save; blank means "no separate limit".
  */
 export function CategoryAllocations() {
@@ -45,8 +45,8 @@ export function CategoryAllocations() {
   }, [data]);
 
   const save = useAdminMutation<CapacityAllocations, UpdateCapacityAllocationsRequest>({
-    mutationFn: (body) => api.put<CapacityAllocations>('/admin/event/allocations', body),
-    invalidate: [adminKeys.event, adminKeys.allocations, adminKeys.categories, adminKeys.dashboard],
+    mutationFn: (body) => api.put<CapacityAllocations>('/admin/celebration/allocations', body),
+    invalidate: [adminKeys.celebration, adminKeys.allocations, adminKeys.categories, adminKeys.dashboard],
     success: 'Category places saved.',
     toastError: false,
     onSuccess: (saved) => {
@@ -119,7 +119,7 @@ export function CategoryAllocations() {
           page to set aside places for them.
         </p>
       ) : (
-        // A <div>, not a <form>: this panel renders inside the event form. Enter saves the places instead.
+        // A <div>, not a <form>: this panel renders inside the celebration form. Enter saves the places instead.
         <div
           onKeyDown={(e) => {
             if (e.key === 'Enter' && e.target instanceof HTMLInputElement) {
@@ -229,7 +229,7 @@ export function CategoryAllocations() {
             {overBy > 0 && (
               <p role="alert" className="mt-1 flex items-start gap-1.5 font-medium">
                 <AlertTriangle className="mt-0.5 size-3.5 shrink-0" aria-hidden />
-                The categories add up to {allocated.toLocaleString()} seats, {overBy.toLocaleString()} more than the event capacity of{' '}
+                The categories add up to {allocated.toLocaleString()} seats, {overBy.toLocaleString()} more than the celebration capacity of{' '}
                 {data.capacity.toLocaleString()}. Lower some categories, or raise the capacity first.
               </p>
             )}

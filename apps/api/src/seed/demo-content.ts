@@ -12,24 +12,12 @@ export const DEMO_USERS = [
   { email: 'staff@demo.local', name: 'Event Staff', role: 'CHECK_IN_STAFF' as const },
 ];
 
-export const DEMO_EVENT = {
+export const DEMO_CELEBRATION = {
   name: 'Margaret at Seventy',
-  tagline: 'An evening of gratitude, music and memories',
+  tagline: 'A weekend of gratitude, music and memories',
   description:
-    'Family and friends gather to give thanks for seventy remarkable years. Dinner, tributes, music and dancing in the Emerald Ballroom.',
-  // 21 November 2026, 5:00 PM to 11:00 PM in Lagos (UTC+1)
-  startsAt: new Date('2026-11-21T16:00:00Z'),
-  endsAt: new Date('2026-11-21T22:00:00Z'),
+    'Family and friends gather over one weekend to give thanks for seventy remarkable years: a thanksgiving service, a birthday dinner with tributes, music and dancing, and a family brunch.',
   timezone: 'Africa/Lagos',
-  venueName: 'The Emerald Ballroom',
-  address: '12 Palm Grove Avenue, Victoria Island',
-  city: 'Lagos',
-  mapUrl: 'https://www.openstreetmap.org/?mlat=6.4281&mlon=3.4219#map=16/6.4281/3.4219',
-  latitude: 6.4281,
-  longitude: 3.4219,
-  theme: 'Emerald & Gold',
-  dressCode: 'Black tie: emerald, gold or ivory accents welcome',
-  parkingInfo: 'Valet parking at the main entrance from 4:30 PM. Overflow parking is signposted on Palm Grove Close.',
   contactName: 'Ngozi Okonkwo-Bello',
   contactEmail: 'celebration@demo.local',
   contactPhone: '+234 800 000 0070',
@@ -41,6 +29,70 @@ export const DEMO_EVENT = {
   maxCompanions: 4,
   allowCompanions: true,
 };
+
+/**
+ * Three events over two days. Times are in Lagos (UTC+1). `categories` lists the guest
+ * categories invited; empty means everyone.
+ */
+export const DEMO_EVENTS = [
+  {
+    slug: 'thanksgiving-service',
+    name: 'Thanksgiving Service',
+    description: 'A service of thanksgiving for seventy years, with the church choir Margaret has sung with for four decades.',
+    // Saturday 21 November 2026, 10:00 AM to 12:00 PM
+    startsAt: new Date('2026-11-21T09:00:00Z'),
+    endsAt: new Date('2026-11-21T11:00:00Z'),
+    venueName: "St. Andrew's Church",
+    address: '3 Cathedral Road, Victoria Island',
+    city: 'Lagos',
+    mapUrl: null,
+    latitude: 6.4302,
+    longitude: 3.4158,
+    dressCode: 'Church attire',
+    theme: null,
+    parkingInfo: 'Parking in the church grounds. Ushers will guide you.',
+    capacity: null,
+    categories: [] as string[],
+  },
+  {
+    slug: 'birthday-dinner',
+    name: 'Birthday Dinner',
+    description: 'Dinner, tributes, music and dancing in the Emerald Ballroom.',
+    // Saturday 21 November 2026, 5:00 PM to 11:00 PM
+    startsAt: new Date('2026-11-21T16:00:00Z'),
+    endsAt: new Date('2026-11-21T22:00:00Z'),
+    venueName: 'The Emerald Ballroom',
+    address: '12 Palm Grove Avenue, Victoria Island',
+    city: 'Lagos',
+    mapUrl: 'https://www.openstreetmap.org/?mlat=6.4281&mlon=3.4219#map=16/6.4281/3.4219',
+    latitude: 6.4281,
+    longitude: 3.4219,
+    dressCode: 'Black tie: emerald, gold or ivory accents welcome',
+    theme: 'Emerald & Gold',
+    parkingInfo: 'Valet parking at the main entrance from 4:30 PM. Overflow parking is signposted on Palm Grove Close.',
+    capacity: null,
+    categories: [] as string[],
+  },
+  {
+    slug: 'family-brunch',
+    name: 'Family Brunch',
+    description: 'A relaxed Sunday brunch at home for the family, with the grandchildren in charge of the music.',
+    // Sunday 22 November 2026, 12:00 PM to 3:00 PM
+    startsAt: new Date('2026-11-22T11:00:00Z'),
+    endsAt: new Date('2026-11-22T14:00:00Z'),
+    venueName: 'The Okonkwo family home',
+    address: '7 Bougainvillea Close, Ikoyi',
+    city: 'Lagos',
+    mapUrl: null,
+    latitude: null,
+    longitude: null,
+    dressCode: 'Casual',
+    theme: null,
+    parkingInfo: null,
+    capacity: 40,
+    categories: ['Family'],
+  },
+];
 
 export const DEMO_CELEBRANT = {
   fullName: 'Dr. Margaret Adaeze Okonkwo',
@@ -152,12 +204,30 @@ export const DEMO_CATEGORIES = [
 ];
 
 export const DEMO_QUESTIONS = [
-  { label: 'Will you join the thanksgiving service at 10:00 AM on the day?', helpText: 'St. Andrew\'s Church, a short drive from the venue.', type: 'SELECT' as const, options: ['Yes', 'No', 'Not sure yet'], required: true },
+  { label: 'Will you need a seat on the shuttle from the church to the ballroom?', helpText: 'It leaves St. Andrew\'s Church at 4:15 PM on Saturday.', type: 'SELECT' as const, options: ['Yes', 'No', 'Not sure yet'], required: true },
   { label: 'A song that reminds you of Margaret', helpText: 'The band will play as many as they can.', type: 'TEXT' as const, options: [], required: false },
   { label: 'I would like to say a few words during the tributes', helpText: null, type: 'CHECKBOX' as const, options: [], required: false },
 ];
 
-export const DEMO_PROGRAMME = [
+export interface DemoProgrammeItem {
+  startTime: string;
+  endTime: string | null;
+  title: string;
+  description: string | null;
+  speaker: string | null;
+  location: string | null;
+}
+
+/** Programme items per event slug. The family brunch has none. */
+export const DEMO_SERVICE_PROGRAMME: DemoProgrammeItem[] = [
+  { startTime: '10:00', endTime: '10:15', title: 'Processional Hymn & Welcome', description: null, speaker: null, location: 'Main church' },
+  { startTime: '10:15', endTime: '10:40', title: 'Readings', description: 'Read by two of the grandchildren.', speaker: null, location: 'Main church' },
+  { startTime: '10:40', endTime: '11:10', title: 'Sermon', description: null, speaker: 'Rev. Canon Peter Obi', location: 'Main church' },
+  { startTime: '11:10', endTime: '11:40', title: 'Thanksgiving & Choir Anthem', description: "The choir sings Margaret's favourite anthem.", speaker: 'St. Andrew\'s Choir', location: 'Main church' },
+  { startTime: '11:40', endTime: '12:00', title: 'Benediction & Photographs', description: null, speaker: null, location: 'Church steps' },
+];
+
+export const DEMO_PROGRAMME: DemoProgrammeItem[] = [
   { startTime: '17:00', endTime: '17:45', title: 'Guest Arrival', description: 'Welcome drinks and canapés on the terrace.', speaker: null, location: 'Garden Terrace' },
   { startTime: '17:45', endTime: '18:00', title: 'Welcome', description: 'Opening words from the family.', speaker: 'Ngozi Okonkwo-Bello', location: 'Emerald Ballroom' },
   { startTime: '18:00', endTime: '18:15', title: 'Thanksgiving Prayer', description: null, speaker: 'Rev. Canon Peter Obi', location: 'Emerald Ballroom' },
@@ -167,25 +237,39 @@ export const DEMO_PROGRAMME = [
   { startTime: '20:30', endTime: '23:00', title: 'Music & Dancing', description: 'Highlife classics and a few surprises.', speaker: 'The Palm Grove Band', location: 'Emerald Ballroom' },
 ];
 
-export const DEMO_GUESTS: { name: string; category: string; companions: string[]; response: 'ATTENDING' | 'DECLINED' | null; dietary?: string; accessibility?: string; revoked?: boolean }[] = [
-  { name: 'Folake Adeyemi', category: 'Family', companions: ['Bayo Adeyemi', 'Tolu Adeyemi'], response: 'ATTENDING', dietary: 'No pork' },
-  { name: 'Ifeanyi Nwosu', category: 'Friends', companions: ['Chiamaka Nwosu'], response: 'ATTENDING' },
-  { name: 'Dr. Samuel Ogunleye', category: 'Colleagues', companions: ['Dr. Funmi Ogunleye'], response: 'ATTENDING' },
-  { name: 'Hauwa Musa', category: 'Colleagues', companions: [], response: 'ATTENDING', dietary: 'Vegetarian' },
-  { name: 'Grace Okafor', category: 'Church & Community', companions: ['Paul Okafor'], response: 'ATTENDING', accessibility: 'Uses a walking frame; a seat near the entrance please' },
+/**
+ * `events` are the event slugs an attending guest chose; each brings all their companions,
+ * except where `fewer` names an event they bring fewer to.
+ */
+export const DEMO_GUESTS: {
+  name: string;
+  category: string;
+  companions: string[];
+  response: 'ATTENDING' | 'DECLINED' | null;
+  events?: string[];
+  fewer?: Record<string, number>;
+  dietary?: string;
+  accessibility?: string;
+  revoked?: boolean;
+}[] = [
+  { name: 'Folake Adeyemi', category: 'Family', companions: ['Bayo Adeyemi', 'Tolu Adeyemi'], response: 'ATTENDING', events: ['thanksgiving-service', 'birthday-dinner', 'family-brunch'], fewer: { 'family-brunch': 1 }, dietary: 'No pork' },
+  { name: 'Ifeanyi Nwosu', category: 'Friends', companions: ['Chiamaka Nwosu'], response: 'ATTENDING', events: ['birthday-dinner'] },
+  { name: 'Dr. Samuel Ogunleye', category: 'Colleagues', companions: ['Dr. Funmi Ogunleye'], response: 'ATTENDING', events: ['thanksgiving-service', 'birthday-dinner'] },
+  { name: 'Hauwa Musa', category: 'Colleagues', companions: [], response: 'ATTENDING', events: ['birthday-dinner'], dietary: 'Vegetarian' },
+  { name: 'Grace Okafor', category: 'Church & Community', companions: ['Paul Okafor'], response: 'ATTENDING', events: ['thanksgiving-service', 'birthday-dinner'], accessibility: 'Uses a walking frame; a seat near the entrance please' },
   { name: 'Emmanuel Johnson', category: 'Friends', companions: [], response: 'DECLINED' },
-  { name: 'Aisha Bello', category: 'Family', companions: ['Musa Bello', 'Fatima Bello', 'Ibrahim Bello'], response: 'ATTENDING' },
-  { name: 'Kelechi Obi', category: 'Family', companions: ['Uche Obi'], response: 'ATTENDING' },
-  { name: 'Prof. Janet Williams', category: 'Honoured Guests', companions: ['Richard Williams'], response: 'ATTENDING' },
-  { name: 'Rev. Canon Peter Obi', category: 'Honoured Guests', companions: ['Mrs. Ruth Obi'], response: 'ATTENDING' },
+  { name: 'Aisha Bello', category: 'Family', companions: ['Musa Bello', 'Fatima Bello', 'Ibrahim Bello'], response: 'ATTENDING', events: ['thanksgiving-service', 'birthday-dinner', 'family-brunch'] },
+  { name: 'Kelechi Obi', category: 'Family', companions: ['Uche Obi'], response: 'ATTENDING', events: ['birthday-dinner', 'family-brunch'] },
+  { name: 'Prof. Janet Williams', category: 'Honoured Guests', companions: ['Richard Williams'], response: 'ATTENDING', events: ['birthday-dinner'] },
+  { name: 'Rev. Canon Peter Obi', category: 'Honoured Guests', companions: ['Mrs. Ruth Obi'], response: 'ATTENDING', events: ['thanksgiving-service', 'birthday-dinner'] },
   { name: 'Yemi Alade-Cole', category: 'Friends', companions: [], response: null },
   { name: 'Chukwuma Eze', category: 'Family', companions: [], response: null },
-  { name: 'Blessing Ade', category: 'Church & Community', companions: [], response: 'ATTENDING', dietary: 'Gluten free' },
-  { name: 'Oluwaseun Martins', category: 'Colleagues', companions: ['Ronke Martins'], response: 'ATTENDING' },
+  { name: 'Blessing Ade', category: 'Church & Community', companions: [], response: 'ATTENDING', events: ['thanksgiving-service'], dietary: 'Gluten free' },
+  { name: 'Oluwaseun Martins', category: 'Colleagues', companions: ['Ronke Martins'], response: 'ATTENDING', events: ['birthday-dinner'] },
   { name: 'Damilola Hassan', category: 'Friends', companions: ['Kunle Hassan'], response: 'DECLINED' },
-  { name: 'Nkechi Umeh', category: 'Family', companions: ['Obinna Umeh', 'Chika Umeh'], response: 'ATTENDING' },
+  { name: 'Nkechi Umeh', category: 'Family', companions: ['Obinna Umeh', 'Chika Umeh'], response: 'ATTENDING', events: ['thanksgiving-service', 'birthday-dinner', 'family-brunch'] },
   { name: 'Tariq Ahmed', category: 'Colleagues', companions: [], response: null, revoked: true },
-  { name: 'Mary Etim', category: 'Church & Community', companions: [], response: 'ATTENDING' },
+  { name: 'Mary Etim', category: 'Church & Community', companions: [], response: 'ATTENDING', events: ['thanksgiving-service', 'birthday-dinner'] },
 ];
 
 export const DEMO_TESTIMONIALS: {

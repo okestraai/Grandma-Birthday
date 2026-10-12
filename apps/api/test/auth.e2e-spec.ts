@@ -42,10 +42,10 @@ describe('Auth (e2e)', () => {
 
   it('requires the CSRF header for cookie-authenticated changes', async () => {
     const { agent, csrf } = await login(ctx, 'admin@test.local');
-    const denied = await agent.put('/api/admin/event').send({ capacity: 120 }).expect(403);
+    const denied = await agent.put('/api/admin/celebration').send({ capacity: 120 }).expect(403);
     expect(denied.body.code).toBe('CSRF_TOKEN_INVALID');
-    await agent.put('/api/admin/event').set('X-CSRF-Token', 'forged').send({ capacity: 120 }).expect(403);
-    await agent.put('/api/admin/event').set('X-CSRF-Token', csrf).send({ capacity: 120 }).expect(200);
+    await agent.put('/api/admin/celebration').set('X-CSRF-Token', 'forged').send({ capacity: 120 }).expect(403);
+    await agent.put('/api/admin/celebration').set('X-CSRF-Token', csrf).send({ capacity: 120 }).expect(200);
   });
 
   it('rotates refresh tokens and ends the session family when an old one is replayed', async () => {

@@ -73,15 +73,24 @@ function paragraph(text: string): string {
   return `<p style="margin:0 0 14px;font-family:Helvetica,Arial,sans-serif;font-size:15px;line-height:1.65;color:#1B1B1B">${text}</p>`;
 }
 
-export interface InvitationEmailData {
-  guestName: string;
-  celebrantName: string;
-  eventName: string;
+/** One event in an invitation email. */
+export interface EmailEvent {
+  name: string;
   dateText: string;
   timeText: string;
   venue: string;
   address: string;
   dressCode: string | null;
+  /** Guest plus the companions coming to this event. */
+  partySize: number;
+}
+
+export interface InvitationEmailData {
+  guestName: string;
+  celebrantName: string;
+  eventName: string;
+  /** The guest's events. One event keeps the original layout; several get one block each. */
+  events: EmailEvent[];
   partySize: number;
   code: string;
   invitationUrl: string;
@@ -95,34 +104,55 @@ export function invitationEmail(data: InvitationEmailData): RenderedEmail {
   const intro = data.isRsvpConfirmation
     ? `Dear ${escapeHtml(data.guestName)}, thank you for your RSVP. We are delighted you will join us to celebrate <strong>${escapeHtml(data.celebrantName)}</strong>.`
     : `Dear ${escapeHtml(data.guestName)}, you are warmly invited to celebrate <strong>${escapeHtml(data.celebrantName)}</strong>.`;
+  const admits = (n: number) => `${n} ${n === 1 ? 'guest' : 'guests'}`;
+  const single = data.events.length <= 1;
+  const [only] = data.events;
+  const details = single
+    ? detailRows([
+        ['Date', only?.dateText],
+        ['Time', only?.timeText],
+        ['Venue', only?.venue],
+        ['Address', only?.address],
+        ['Dress code', only?.dressCode],
+        ['Admits', admits(data.partySize)],
+        ['Invitation', data.code],
+      ])
+    : data.events
+        .map(
+          (e) => `<tr><td colspan="2" style="padding:16px 0 2px;font-family:Georgia,'Times New Roman',serif;font-size:18px;color:${NAVY}">${escapeHtml(e.name)}</td></tr>
+    ${detailRows([
+      ['When', `${e.dateText}, ${e.timeText}`],
+      ['Venue', `${e.venue}, ${e.address}`],
+      ['Dress code', e.dressCode],
+      ['Admits', admits(e.partySize)],
+    ])}`,
+        )
+        .join('') + detailRows([['Invitation', data.code]]);
   const body = `${paragraph(intro)}
   <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin:18px 0 6px;border-top:1px solid #F1E9D6;border-bottom:1px solid #F1E9D6">
-    ${detailRows([
-      ['Date', data.dateText],
-      ['Time', data.timeText],
-      ['Venue', data.venue],
-      ['Address', data.address],
-      ['Dress code', data.dressCode],
-      ['Admits', `${data.partySize} ${data.partySize === 1 ? 'guest' : 'guests'}`],
-      ['Invitation', data.code],
-    ])}
+    ${details}
   </table>
   ${button(data.invitationUrl, data.isRsvpConfirmation ? 'View your digital invitation' : 'Open your invitation & RSVP')}
-  ${paragraph(`<span style="color:${MUTED};font-size:13px">Your digital invitation holds a personal QR code. Please have it ready on your phone, or printed, when you arrive.</span>`)}`;
+  ${paragraph(`<span style="color:${MUTED};font-size:13px">Your digital invitation holds a personal QR code${single ? '' : ' that works at every event'}. Please have it ready on your phone, or printed, when you arrive.</span>`)}`;
+  const eventText = single
+    ? [
+        `Date: ${only?.dateText ?? ''}`,
+        `Time: ${only?.timeText ?? ''}`,
+        `Venue: ${only?.venue ?? ''}, ${only?.address ?? ''}`,
+        only?.dressCode ? `Dress code: ${only.dressCode}` : '',
+        `Admits: ${data.partySize}`,
+      ]
+    : data.events.map((e) => `${e.name}: ${e.dateText}, ${e.timeText}. ${e.venue}, ${e.address}.${e.dressCode ? ` Dress code: ${e.dressCode}.` : ''} Admits ${e.partySize}.`);
   const text = [
     data.isRsvpConfirmation ? `Dear ${data.guestName}, thank you for your RSVP.` : `Dear ${data.guestName}, you are invited.`,
     `${data.eventName} — celebrating ${data.celebrantName}`,
-    `Date: ${data.dateText}`,
-    `Time: ${data.timeText}`,
-    `Venue: ${data.venue}, ${data.address}`,
-    data.dressCode ? `Dress code: ${data.dressCode}` : '',
-    `Admits: ${data.partySize}`,
+    ...eventText,
     `Invitation: ${data.code}`,
     `Your invitation: ${data.invitationUrl}`,
   ]
     .filter(Boolean)
     .join('\n');
-  return { subject, text, html: layout({ preheader: `${data.eventName} · ${data.dateText}`, heading: data.isRsvpConfirmation ? "You're on the guest list." : "You're invited.", body }) };
+  return { subject, text, html: layout({ preheader: `${data.eventName} · ${only?.dateText ?? ''}`, heading: data.isRsvpConfirmation ? "You're on the guest list." : "You're invited.", body }) };
 }
 
 export function rsvpDeclinedEmail(data: { guestName: string; celebrantName: string; eventName: string }): RenderedEmail {

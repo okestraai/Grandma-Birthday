@@ -195,16 +195,16 @@ export class GuestsController {
   /** A category's share cannot be below its confirmed guests, nor push the total past the event capacity. */
   private async assertCapacity(capacity: number | null | undefined, id?: string): Promise<void> {
     if (capacity === undefined || capacity === null) return;
-    const [event, others, byCategory] = await Promise.all([
-      this.settings.getEvent(),
+    const [celebration, others, byCategory] = await Promise.all([
+      this.settings.getCelebration(),
       this.prisma.guestCategory.aggregate({ where: { id: id ? { not: id } : undefined }, _sum: { capacity: true } }),
       this.settings.confirmedPeopleByCategory(),
     ]);
     const confirmed = id ? (byCategory.get(id) ?? 0) : 0;
     if (capacity < confirmed) throw Errors.validation({ capacity: [`${confirmed} people in this category are already confirmed.`] });
     const total = (others._sum.capacity ?? 0) + capacity;
-    if (total > event.capacity) {
-      throw Errors.validation({ capacity: [`Categories would then hold ${total} places, more than the event capacity of ${event.capacity}.`] });
+    if (total > celebration.capacity) {
+      throw Errors.validation({ capacity: [`Categories would then hold ${total} places, more than the celebration capacity of ${celebration.capacity}.`] });
     }
   }
 

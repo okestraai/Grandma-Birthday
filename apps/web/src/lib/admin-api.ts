@@ -10,14 +10,16 @@ import { apiUrl, errorMessage, isApiError } from './api';
 export const adminKeys = {
   all: ['admin'] as const,
   dashboard: ['admin', 'dashboard'] as const,
-  event: ['admin', 'event'] as const,
-  /** Nested under `event` so invalidating the event also refreshes the split. */
-  allocations: ['admin', 'event', 'allocations'] as const,
+  celebration: ['admin', 'celebration'] as const,
+  /** Nested under `celebration` so invalidating the celebration also refreshes the split. */
+  allocations: ['admin', 'celebration', 'allocations'] as const,
+  events: ['admin', 'events'] as const,
   settings: ['admin', 'settings'] as const,
   celebrant: ['admin', 'celebrant'] as const,
   timeline: ['admin', 'timeline'] as const,
   family: ['admin', 'family'] as const,
   programme: ['admin', 'programme'] as const,
+  programmeList: (eventId: string) => ['admin', 'programme', eventId] as const,
   albums: ['admin', 'albums'] as const,
   media: ['admin', 'media'] as const,
   mediaList: (params: Record<string, unknown>) => ['admin', 'media', 'list', params] as const,
@@ -36,6 +38,8 @@ export const adminKeys = {
   checkins: ['admin', 'checkins'] as const,
   checkinList: (params: Record<string, unknown>) => ['admin', 'checkins', 'list', params] as const,
   checkinOverview: ['admin', 'checkin', 'overview'] as const,
+  /** No eventId: the event the server picks (in progress, next, or last). */
+  checkinOverviewFor: (eventId: string | null) => ['admin', 'checkin', 'overview', eventId] as const,
   users: ['admin', 'users'] as const,
   audit: (params: Record<string, unknown>) => ['admin', 'audit-logs', params] as const,
 };
@@ -44,8 +48,8 @@ export const adminKeys = {
 export const affects = {
   media: [adminKeys.media, adminKeys.albums, adminKeys.storage, adminKeys.dashboard],
   testimonials: [adminKeys.testimonials, adminKeys.dashboard],
-  guests: [adminKeys.guests, adminKeys.invitations, adminKeys.categories, adminKeys.dashboard, adminKeys.event],
-  checkins: [adminKeys.checkins, adminKeys.checkinOverview, adminKeys.guests, adminKeys.invitations, adminKeys.dashboard],
+  guests: [adminKeys.guests, adminKeys.invitations, adminKeys.categories, adminKeys.dashboard, adminKeys.celebration, adminKeys.events],
+  checkins: [adminKeys.checkins, adminKeys.checkinOverview, adminKeys.guests, adminKeys.invitations, adminKeys.dashboard, adminKeys.events],
 } satisfies Record<string, QueryKey[]>;
 
 export interface AdminMutationOptions<TData, TVars> {

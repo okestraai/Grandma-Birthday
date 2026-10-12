@@ -219,12 +219,14 @@ async function seoFor(path) {
 
 /** Basic tags from the saved site data, for when the SEO lookup fails. Null without a snapshot. */
 function fallbackSeo(site, pathname) {
-  if (!site?.celebrant || !site.event) return null;
+  if (!site?.celebrant || !site.celebration) return null;
   const c = site.celebrant;
   const name = !c.honorific || c.fullName.startsWith(c.honorific) ? c.fullName : `${c.honorific} ${c.fullName}`;
   return {
     title: site.branding?.siteTitle ?? `${name} at ${c.age ?? 70}`,
-    description: site.branding?.siteDescription ?? `Celebrate ${c.age ?? 70} years of ${name} at ${site.event.venueName}.`,
+    description:
+      site.branding?.siteDescription ??
+      (site.events?.length === 1 ? `Celebrate ${c.age ?? 70} years of ${name} at ${site.events[0].venueName}.` : `Celebrate ${c.age ?? 70} years of ${name}.`),
     canonicalUrl: `${SITE_URL}${pathname}`,
     type: 'website',
     noindex: false,

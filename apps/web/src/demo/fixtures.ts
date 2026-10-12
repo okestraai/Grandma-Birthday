@@ -4,7 +4,7 @@ import type {
   AlbumSummary,
   FamilyTree,
   Paginated,
-  ProgrammeItem,
+  ProgrammeGroup,
   PublicMedia,
   PublicTestimonial,
   RsvpFormConfig,
@@ -13,22 +13,13 @@ import type {
 } from '@birthday/types';
 
 export const site: SiteOverview = {
-  "event": {
+  "celebration": {
     "name": "Margaret at Seventy",
-    "tagline": "An evening of gratitude, music and memories",
-    "description": "Family and friends gather to give thanks for seventy remarkable years. Dinner, tributes, music and dancing in the Emerald Ballroom.",
-    "startsAt": "2026-11-21T16:00:00.000Z",
-    "endsAt": "2026-11-21T22:00:00.000Z",
+    "tagline": "A weekend of gratitude, music and memories",
+    "description": "Family and friends gather over one weekend to give thanks for seventy remarkable years: a thanksgiving service, a birthday dinner with tributes, music and dancing, and a family brunch.",
     "timezone": "Africa/Lagos",
-    "venueName": "The Emerald Ballroom",
-    "address": "12 Palm Grove Avenue, Victoria Island",
-    "city": "Lagos",
-    "mapUrl": "https://www.openstreetmap.org/?mlat=6.4281&mlon=3.4219#map=16/6.4281/3.4219",
-    "latitude": 6.4281,
-    "longitude": 3.4219,
-    "theme": "Emerald & Gold",
-    "dressCode": "Black tie: emerald, gold or ivory accents welcome",
-    "parkingInfo": "Valet parking at the main entrance from 4:30 PM. Overflow parking is signposted on Palm Grove Close.",
+    "startsAt": "2026-11-21T09:00:00.000Z",
+    "endsAt": "2026-11-22T14:00:00.000Z",
     "contactName": "Ngozi Okonkwo-Bello",
     "contactEmail": "celebration@demo.local",
     "contactPhone": "+234 800 000 0070",
@@ -39,6 +30,70 @@ export const site: SiteOverview = {
       "closedReason": null
     }
   },
+  "events": [
+    {
+      "id": "6e71d330-d4fa-4463-a53f-e30f97b9fe35",
+      "slug": "thanksgiving-service",
+      "name": "Thanksgiving Service",
+      "description": "A service of thanksgiving for seventy years, with the church choir Margaret has sung with for four decades.",
+      "startsAt": "2026-11-21T09:00:00.000Z",
+      "endsAt": "2026-11-21T11:00:00.000Z",
+      "venueName": "St. Andrew's Church",
+      "address": "3 Cathedral Road, Victoria Island",
+      "city": "Lagos",
+      "mapUrl": null,
+      "latitude": 6.4302,
+      "longitude": 3.4158,
+      "dressCode": "Church attire",
+      "theme": null,
+      "parkingInfo": "Parking in the church grounds. Ushers will guide you.",
+      "rsvpEnabled": true,
+      "invitedCategories": [],
+      "sortOrder": 0
+    },
+    {
+      "id": "7ef5ff4b-0b0b-46eb-ad92-527d153d6ffb",
+      "slug": "birthday-dinner",
+      "name": "Birthday Dinner",
+      "description": "Dinner, tributes, music and dancing in the Emerald Ballroom.",
+      "startsAt": "2026-11-21T16:00:00.000Z",
+      "endsAt": "2026-11-21T22:00:00.000Z",
+      "venueName": "The Emerald Ballroom",
+      "address": "12 Palm Grove Avenue, Victoria Island",
+      "city": "Lagos",
+      "mapUrl": "https://www.openstreetmap.org/?mlat=6.4281&mlon=3.4219#map=16/6.4281/3.4219",
+      "latitude": 6.4281,
+      "longitude": 3.4219,
+      "dressCode": "Black tie: emerald, gold or ivory accents welcome",
+      "theme": "Emerald & Gold",
+      "parkingInfo": "Valet parking at the main entrance from 4:30 PM. Overflow parking is signposted on Palm Grove Close.",
+      "rsvpEnabled": true,
+      "invitedCategories": [],
+      "sortOrder": 1
+    },
+    {
+      "id": "e1feaa12-83a5-4240-8682-792b369c539a",
+      "slug": "family-brunch",
+      "name": "Family Brunch",
+      "description": "A relaxed Sunday brunch at home for the family, with the grandchildren in charge of the music.",
+      "startsAt": "2026-11-22T11:00:00.000Z",
+      "endsAt": "2026-11-22T14:00:00.000Z",
+      "venueName": "The Okonkwo family home",
+      "address": "7 Bougainvillea Close, Ikoyi",
+      "city": "Lagos",
+      "mapUrl": null,
+      "latitude": null,
+      "longitude": null,
+      "dressCode": "Casual",
+      "theme": null,
+      "parkingInfo": null,
+      "rsvpEnabled": true,
+      "invitedCategories": [
+        "Family"
+      ],
+      "sortOrder": 2
+    }
+  ],
   "celebrant": {
     "fullName": "Dr. Margaret Adaeze Okonkwo",
     "preferredName": "Margaret",
@@ -65,7 +120,7 @@ export const site: SiteOverview = {
       "Hospitality"
     ],
     "portrait": {
-      "id": "f3682c6e-7b63-424f-a51c-ef0ef9250167",
+      "id": "d58ed85f-1a99-445f-989e-5df48115aa04",
       "kind": "PHOTO",
       "mimeType": "image/jpeg",
       "width": 1200,
@@ -73,9 +128,9 @@ export const site: SiteOverview = {
       "caption": "Margaret, 2026",
       "altText": "Portrait of Margaret",
       "urls": {
-        "thumb": "/demo/f3682c6e-thumb.webp",
-        "medium": "/demo/f3682c6e-medium.webp",
-        "original": "/demo/f3682c6e-medium.webp"
+        "thumb": "/demo/d58ed85f-thumb.webp",
+        "medium": "/demo/d58ed85f-medium.webp",
+        "original": "/demo/d58ed85f-medium.webp"
       }
     }
   },
@@ -86,7 +141,7 @@ export const site: SiteOverview = {
     "secondaryColor": "#D6B36A",
     "logo": null,
     "hero": {
-      "id": "a0b2f5cc-ccde-4221-a618-9b43774e8baf",
+      "id": "127b334e-4462-484d-b3bd-71d2ae0378eb",
       "kind": "PHOTO",
       "mimeType": "image/jpeg",
       "width": 2000,
@@ -94,13 +149,13 @@ export const site: SiteOverview = {
       "caption": null,
       "altText": "Gold light over a dark emerald background",
       "urls": {
-        "thumb": "/demo/a0b2f5cc-thumb.webp",
-        "medium": "/demo/a0b2f5cc-medium.webp",
-        "original": "/demo/a0b2f5cc-medium.webp"
+        "thumb": "/demo/127b334e-thumb.webp",
+        "medium": "/demo/127b334e-medium.webp",
+        "original": "/demo/127b334e-medium.webp"
       }
     },
     "ogImage": {
-      "id": "f3682c6e-7b63-424f-a51c-ef0ef9250167",
+      "id": "d58ed85f-1a99-445f-989e-5df48115aa04",
       "kind": "PHOTO",
       "mimeType": "image/jpeg",
       "width": 1200,
@@ -108,9 +163,9 @@ export const site: SiteOverview = {
       "caption": "Margaret, 2026",
       "altText": "Portrait of Margaret",
       "urls": {
-        "thumb": "/demo/f3682c6e-thumb.webp",
-        "medium": "/demo/f3682c6e-medium.webp",
-        "original": "/demo/f3682c6e-medium.webp"
+        "thumb": "/demo/d58ed85f-thumb.webp",
+        "medium": "/demo/d58ed85f-medium.webp",
+        "original": "/demo/d58ed85f-medium.webp"
       }
     }
   },
@@ -124,14 +179,14 @@ export const site: SiteOverview = {
 
 export const timeline: TimelineEntry[] = [
   {
-    "id": "c056c3bd-6358-4b3e-8456-f887fb777dc7",
+    "id": "16d91ada-9c05-4f41-af6e-a488c0dd5758",
     "year": 1956,
     "month": 11,
     "title": "Born in Enugu",
     "description": "The second of four children, born to a bookseller and a mathematics teacher.",
     "category": "BIRTH",
     "media": {
-      "id": "22bc6569-c4f9-48b7-bd49-5e9c85656f59",
+      "id": "5d7e1074-5269-4c28-b385-68a96ea884b8",
       "kind": "PHOTO",
       "mimeType": "image/jpeg",
       "width": 1600,
@@ -139,22 +194,22 @@ export const timeline: TimelineEntry[] = [
       "caption": null,
       "altText": "Born in Enugu",
       "urls": {
-        "thumb": "/demo/22bc6569-thumb.webp",
-        "medium": "/demo/22bc6569-medium.webp",
-        "original": "/demo/22bc6569-medium.webp"
+        "thumb": "/demo/5d7e1074-thumb.webp",
+        "medium": "/demo/5d7e1074-medium.webp",
+        "original": "/demo/5d7e1074-medium.webp"
       }
     },
     "sortOrder": 0
   },
   {
-    "id": "177e7283-6022-4d65-a5df-a36f6208d261",
+    "id": "a34fb299-6770-4746-96da-1c4b0a3c9a4f",
     "year": 1968,
     "month": null,
     "title": "A love of learning",
     "description": "Top of her class at Queen's School, and already reading her father's textbooks.",
     "category": "EDUCATION",
     "media": {
-      "id": "e9b9aaae-6fea-404b-8c74-cac8f0840844",
+      "id": "ddf29552-bd41-43ff-b3ca-73a9741d820b",
       "kind": "PHOTO",
       "mimeType": "image/jpeg",
       "width": 1600,
@@ -162,15 +217,15 @@ export const timeline: TimelineEntry[] = [
       "caption": null,
       "altText": "A love of learning",
       "urls": {
-        "thumb": "/demo/e9b9aaae-thumb.webp",
-        "medium": "/demo/e9b9aaae-medium.webp",
-        "original": "/demo/e9b9aaae-medium.webp"
+        "thumb": "/demo/ddf29552-thumb.webp",
+        "medium": "/demo/ddf29552-medium.webp",
+        "original": "/demo/ddf29552-medium.webp"
       }
     },
     "sortOrder": 1
   },
   {
-    "id": "47bedf56-d805-4ad7-b9b4-984f54094916",
+    "id": "a0d8f261-8a0f-40b2-9673-b38a275f6f5e",
     "year": 1975,
     "month": 9,
     "title": "Medical school",
@@ -180,14 +235,14 @@ export const timeline: TimelineEntry[] = [
     "sortOrder": 2
   },
   {
-    "id": "be5fbb77-e160-43ee-802b-e39238f16d46",
+    "id": "0a1275b9-5266-4ead-8fd2-024c491f23da",
     "year": 1976,
     "month": 4,
     "title": "Married Emeka",
     "description": "A wedding in Enugu with three hundred guests and one very long speech.",
     "category": "FAMILY",
     "media": {
-      "id": "da25cc8c-66ad-4d19-ab7a-903fd80bdab6",
+      "id": "056913cc-45d8-4dcc-b5d4-4aed4c85f25f",
       "kind": "PHOTO",
       "mimeType": "image/jpeg",
       "width": 1600,
@@ -195,22 +250,22 @@ export const timeline: TimelineEntry[] = [
       "caption": null,
       "altText": "Married Emeka",
       "urls": {
-        "thumb": "/demo/da25cc8c-thumb.webp",
-        "medium": "/demo/da25cc8c-medium.webp",
-        "original": "/demo/da25cc8c-medium.webp"
+        "thumb": "/demo/056913cc-thumb.webp",
+        "medium": "/demo/056913cc-medium.webp",
+        "original": "/demo/056913cc-medium.webp"
       }
     },
     "sortOrder": 3
   },
   {
-    "id": "08b484fd-a1aa-47c8-95f9-38de1cc18397",
+    "id": "5e10370d-404d-4382-a131-a174ee80ac15",
     "year": 1978,
     "month": null,
     "title": "Motherhood",
     "description": "Welcomed Ngozi, followed by Chidi in 1981 and Amara in 1985.",
     "category": "FAMILY",
     "media": {
-      "id": "16538050-6735-4afd-b23e-7559ee7f4b80",
+      "id": "a62c6cfa-ed15-440e-b6d7-059cf6e1890a",
       "kind": "PHOTO",
       "mimeType": "image/jpeg",
       "width": 1600,
@@ -218,22 +273,22 @@ export const timeline: TimelineEntry[] = [
       "caption": null,
       "altText": "Motherhood",
       "urls": {
-        "thumb": "/demo/16538050-thumb.webp",
-        "medium": "/demo/16538050-medium.webp",
-        "original": "/demo/16538050-medium.webp"
+        "thumb": "/demo/a62c6cfa-thumb.webp",
+        "medium": "/demo/a62c6cfa-medium.webp",
+        "original": "/demo/a62c6cfa-medium.webp"
       }
     },
     "sortOrder": 4
   },
   {
-    "id": "72c5c483-73db-4897-bd64-5ec6f0ebb78e",
+    "id": "8f27f97e-7e05-43c2-994c-a1146c895fbf",
     "year": 1981,
     "month": 7,
     "title": "Qualified as a doctor",
     "description": "Graduated with distinction and began work in rural clinics.",
     "category": "CAREER",
     "media": {
-      "id": "66ed9cef-d93a-4273-8c23-b651a6c48691",
+      "id": "0bd88f33-6d45-4aad-9fc2-832c03fa6ec9",
       "kind": "PHOTO",
       "mimeType": "image/jpeg",
       "width": 1600,
@@ -241,15 +296,15 @@ export const timeline: TimelineEntry[] = [
       "caption": null,
       "altText": "Qualified as a doctor",
       "urls": {
-        "thumb": "/demo/66ed9cef-thumb.webp",
-        "medium": "/demo/66ed9cef-medium.webp",
-        "original": "/demo/66ed9cef-medium.webp"
+        "thumb": "/demo/0bd88f33-thumb.webp",
+        "medium": "/demo/0bd88f33-medium.webp",
+        "original": "/demo/0bd88f33-medium.webp"
       }
     },
     "sortOrder": 5
   },
   {
-    "id": "28c9cd03-e86b-49a1-8d46-ac1627d3353a",
+    "id": "45aed1e8-e464-4942-813f-de6339b4432a",
     "year": 1994,
     "month": 1,
     "title": "Head of paediatrics",
@@ -259,14 +314,14 @@ export const timeline: TimelineEntry[] = [
     "sortOrder": 6
   },
   {
-    "id": "15fcc3a7-f0ac-42fc-ac99-517b0780af76",
+    "id": "c8fb58f0-9c56-4172-b3d2-86133cedd86c",
     "year": 2005,
     "month": null,
     "title": "The mobile clinic",
     "description": "Launched a mobile maternal-health clinic reaching villages across three states.",
     "category": "ACHIEVEMENT",
     "media": {
-      "id": "2ca5737a-9c82-420c-8ab0-9ada6ea9740c",
+      "id": "deb1788f-52c9-4455-8bd0-b6c9b4148764",
       "kind": "PHOTO",
       "mimeType": "image/jpeg",
       "width": 1600,
@@ -274,22 +329,22 @@ export const timeline: TimelineEntry[] = [
       "caption": null,
       "altText": "The mobile clinic",
       "urls": {
-        "thumb": "/demo/2ca5737a-thumb.webp",
-        "medium": "/demo/2ca5737a-medium.webp",
-        "original": "/demo/2ca5737a-medium.webp"
+        "thumb": "/demo/deb1788f-thumb.webp",
+        "medium": "/demo/deb1788f-medium.webp",
+        "original": "/demo/deb1788f-medium.webp"
       }
     },
     "sortOrder": 7
   },
   {
-    "id": "d9272c48-0419-4282-8051-a24ccbc2e341",
+    "id": "00ac607e-c64f-4380-8b67-81ca43c7804d",
     "year": 2012,
     "month": 10,
     "title": "National recognition",
     "description": "Received a national award for service to public health.",
     "category": "ACHIEVEMENT",
     "media": {
-      "id": "8aada945-544e-4285-a8d3-ee2baf193ef4",
+      "id": "80d6fae9-a130-4249-b419-14724814671e",
       "kind": "PHOTO",
       "mimeType": "image/jpeg",
       "width": 1600,
@@ -297,15 +352,15 @@ export const timeline: TimelineEntry[] = [
       "caption": null,
       "altText": "National recognition",
       "urls": {
-        "thumb": "/demo/8aada945-thumb.webp",
-        "medium": "/demo/8aada945-medium.webp",
-        "original": "/demo/8aada945-medium.webp"
+        "thumb": "/demo/80d6fae9-thumb.webp",
+        "medium": "/demo/80d6fae9-medium.webp",
+        "original": "/demo/80d6fae9-medium.webp"
       }
     },
     "sortOrder": 8
   },
   {
-    "id": "c750d7bd-8855-4a40-ae52-4c04d3558250",
+    "id": "43ad1c04-cb32-4bd3-9f1e-333e779c8909",
     "year": 2016,
     "month": null,
     "title": "A new chapter",
@@ -315,14 +370,14 @@ export const timeline: TimelineEntry[] = [
     "sortOrder": 9
   },
   {
-    "id": "bf339652-20fa-4a70-9a1a-d29faf1e171e",
+    "id": "bb553334-4ad5-45b9-82e8-feefce800334",
     "year": 2023,
     "month": null,
     "title": "A great-grandmother",
     "description": "Kemi and David welcomed Adaeze, named after her great-grandmother. Tomiwa followed in 2025.",
     "category": "FAMILY",
     "media": {
-      "id": "37d2e3eb-0a95-4ba3-b9c5-fd9196b026e8",
+      "id": "5acd2ba6-2f28-4118-a6f6-d34fb51f5b23",
       "kind": "PHOTO",
       "mimeType": "image/jpeg",
       "width": 1600,
@@ -330,22 +385,22 @@ export const timeline: TimelineEntry[] = [
       "caption": null,
       "altText": "A great-grandmother",
       "urls": {
-        "thumb": "/demo/37d2e3eb-thumb.webp",
-        "medium": "/demo/37d2e3eb-medium.webp",
-        "original": "/demo/37d2e3eb-medium.webp"
+        "thumb": "/demo/5acd2ba6-thumb.webp",
+        "medium": "/demo/5acd2ba6-medium.webp",
+        "original": "/demo/5acd2ba6-medium.webp"
       }
     },
     "sortOrder": 10
   },
   {
-    "id": "3fbc6817-a78f-439a-b249-7d30f757df4b",
+    "id": "f9a38f5c-4a93-4397-a2f8-6dbf86b891b4",
     "year": 2026,
     "month": 11,
     "title": "Seventy years",
     "description": "A celebration of a life of love, faith and service.",
     "category": "MILESTONE",
     "media": {
-      "id": "c90ca0df-278c-40a6-afe5-d855222435e5",
+      "id": "2d7bb21e-899a-437d-8281-951188af9c6a",
       "kind": "PHOTO",
       "mimeType": "image/jpeg",
       "width": 1600,
@@ -353,9 +408,9 @@ export const timeline: TimelineEntry[] = [
       "caption": null,
       "altText": "Seventy years",
       "urls": {
-        "thumb": "/demo/c90ca0df-thumb.webp",
-        "medium": "/demo/c90ca0df-medium.webp",
-        "original": "/demo/c90ca0df-medium.webp"
+        "thumb": "/demo/2d7bb21e-thumb.webp",
+        "medium": "/demo/2d7bb21e-medium.webp",
+        "original": "/demo/2d7bb21e-medium.webp"
       }
     },
     "sortOrder": 11
@@ -365,7 +420,7 @@ export const timeline: TimelineEntry[] = [
 export const family: FamilyTree = {
   "members": [
     {
-      "id": "4d1dd5df-70aa-4797-b4e3-df050d65a15e",
+      "id": "1e97b12c-652e-49ca-87b8-afd39c9db17b",
       "fullName": "Chief Josiah Nnamdi Eze",
       "relationshipLabel": "Father",
       "generation": -1,
@@ -374,7 +429,7 @@ export const family: FamilyTree = {
       "birthYear": 1924,
       "deathYear": 1999,
       "photo": {
-        "id": "c4b0dd6e-9100-4a4b-b072-c70e488761c7",
+        "id": "7f7896ca-4c60-4a55-af1a-bed0db65f005",
         "kind": "PHOTO",
         "mimeType": "image/jpeg",
         "width": 800,
@@ -382,15 +437,15 @@ export const family: FamilyTree = {
         "caption": null,
         "altText": "Chief Josiah Nnamdi Eze",
         "urls": {
-          "thumb": "/demo/c4b0dd6e-thumb.webp",
-          "medium": "/demo/c4b0dd6e-medium.webp",
-          "original": "/demo/c4b0dd6e-medium.webp"
+          "thumb": "/demo/7f7896ca-thumb.webp",
+          "medium": "/demo/7f7896ca-medium.webp",
+          "original": "/demo/7f7896ca-medium.webp"
         }
       },
       "sortOrder": 0
     },
     {
-      "id": "7a57d747-81ca-4eb2-be13-bfb2301e672a",
+      "id": "18656c90-d347-448f-9ed4-03c351bc0f04",
       "fullName": "Mrs. Grace Ifeoma Eze",
       "relationshipLabel": "Mother",
       "generation": -1,
@@ -399,7 +454,7 @@ export const family: FamilyTree = {
       "birthYear": 1930,
       "deathYear": 2014,
       "photo": {
-        "id": "11f1c391-2a41-49c5-a732-2d5f753922c1",
+        "id": "0a695193-086a-4142-95bb-dd7d119c9564",
         "kind": "PHOTO",
         "mimeType": "image/jpeg",
         "width": 800,
@@ -407,15 +462,15 @@ export const family: FamilyTree = {
         "caption": null,
         "altText": "Mrs. Grace Ifeoma Eze",
         "urls": {
-          "thumb": "/demo/11f1c391-thumb.webp",
-          "medium": "/demo/11f1c391-medium.webp",
-          "original": "/demo/11f1c391-medium.webp"
+          "thumb": "/demo/0a695193-thumb.webp",
+          "medium": "/demo/0a695193-medium.webp",
+          "original": "/demo/0a695193-medium.webp"
         }
       },
       "sortOrder": 1
     },
     {
-      "id": "8a234c44-061d-4f8c-97c3-2cec113b6746",
+      "id": "570d0bfd-4d55-41b8-b2ee-7a481232628e",
       "fullName": "Dr. Margaret Adaeze Okonkwo",
       "relationshipLabel": "The celebrant",
       "generation": 0,
@@ -424,7 +479,7 @@ export const family: FamilyTree = {
       "birthYear": 1956,
       "deathYear": null,
       "photo": {
-        "id": "170c11df-4b0c-429e-891b-7f99b5aa70b8",
+        "id": "485b3f6e-77bd-4d8a-978a-56f2d6d36f4a",
         "kind": "PHOTO",
         "mimeType": "image/jpeg",
         "width": 800,
@@ -432,15 +487,15 @@ export const family: FamilyTree = {
         "caption": null,
         "altText": "Dr. Margaret Adaeze Okonkwo",
         "urls": {
-          "thumb": "/demo/170c11df-thumb.webp",
-          "medium": "/demo/170c11df-medium.webp",
-          "original": "/demo/170c11df-medium.webp"
+          "thumb": "/demo/485b3f6e-thumb.webp",
+          "medium": "/demo/485b3f6e-medium.webp",
+          "original": "/demo/485b3f6e-medium.webp"
         }
       },
       "sortOrder": 2
     },
     {
-      "id": "811c4beb-3d3f-451f-a136-68cd43fd2a56",
+      "id": "6bbc1138-5292-4c74-a682-2bfd6ec9606d",
       "fullName": "Engr. Emeka Okonkwo",
       "relationshipLabel": "Husband",
       "generation": 0,
@@ -449,7 +504,7 @@ export const family: FamilyTree = {
       "birthYear": 1953,
       "deathYear": null,
       "photo": {
-        "id": "ee5b4ec5-bc4f-4bbf-9e4d-5162f08278e2",
+        "id": "7db84828-5676-4346-a3bf-6cc2b7bebb91",
         "kind": "PHOTO",
         "mimeType": "image/jpeg",
         "width": 800,
@@ -457,15 +512,15 @@ export const family: FamilyTree = {
         "caption": null,
         "altText": "Engr. Emeka Okonkwo",
         "urls": {
-          "thumb": "/demo/ee5b4ec5-thumb.webp",
-          "medium": "/demo/ee5b4ec5-medium.webp",
-          "original": "/demo/ee5b4ec5-medium.webp"
+          "thumb": "/demo/7db84828-thumb.webp",
+          "medium": "/demo/7db84828-medium.webp",
+          "original": "/demo/7db84828-medium.webp"
         }
       },
       "sortOrder": 3
     },
     {
-      "id": "6944071f-2cb3-4450-a747-6cdcf143ec2b",
+      "id": "5407bc94-69ff-4d2a-92eb-0b3711be5c75",
       "fullName": "Justice Obinna Eze",
       "relationshipLabel": "Brother",
       "generation": 0,
@@ -474,7 +529,7 @@ export const family: FamilyTree = {
       "birthYear": 1953,
       "deathYear": null,
       "photo": {
-        "id": "7733409b-87df-4080-99a2-3c9da641b0d7",
+        "id": "438f5baf-6a4c-42de-a89f-04aa71e0e66b",
         "kind": "PHOTO",
         "mimeType": "image/jpeg",
         "width": 800,
@@ -482,15 +537,15 @@ export const family: FamilyTree = {
         "caption": null,
         "altText": "Justice Obinna Eze",
         "urls": {
-          "thumb": "/demo/7733409b-thumb.webp",
-          "medium": "/demo/7733409b-medium.webp",
-          "original": "/demo/7733409b-medium.webp"
+          "thumb": "/demo/438f5baf-thumb.webp",
+          "medium": "/demo/438f5baf-medium.webp",
+          "original": "/demo/438f5baf-medium.webp"
         }
       },
       "sortOrder": 4
     },
     {
-      "id": "88aba4cb-fea8-4ef1-8ca5-dedaaa9367d0",
+      "id": "6cec5f29-3d1c-4148-9087-329ea1dc9839",
       "fullName": "Mrs. Ifeoma Eze",
       "relationshipLabel": "Sister-in-law",
       "generation": 0,
@@ -499,7 +554,7 @@ export const family: FamilyTree = {
       "birthYear": 1955,
       "deathYear": null,
       "photo": {
-        "id": "c12140c6-1592-4980-ab41-dfe0c626e7d0",
+        "id": "20eaea0c-5dcd-421e-8e74-3ea8d5ad2ee4",
         "kind": "PHOTO",
         "mimeType": "image/jpeg",
         "width": 800,
@@ -507,15 +562,15 @@ export const family: FamilyTree = {
         "caption": null,
         "altText": "Mrs. Ifeoma Eze",
         "urls": {
-          "thumb": "/demo/c12140c6-thumb.webp",
-          "medium": "/demo/c12140c6-medium.webp",
-          "original": "/demo/c12140c6-medium.webp"
+          "thumb": "/demo/20eaea0c-thumb.webp",
+          "medium": "/demo/20eaea0c-medium.webp",
+          "original": "/demo/20eaea0c-medium.webp"
         }
       },
       "sortOrder": 5
     },
     {
-      "id": "3213fab7-4295-4878-8ca2-94726834bd42",
+      "id": "7bd70171-d22c-402d-89df-62e5171c5256",
       "fullName": "Chioma Eze-Adeyemi",
       "relationshipLabel": "Sister",
       "generation": 0,
@@ -524,7 +579,7 @@ export const family: FamilyTree = {
       "birthYear": 1960,
       "deathYear": null,
       "photo": {
-        "id": "0bb67cf2-b607-4c1c-91f3-616400cb08ec",
+        "id": "d0ee2f74-e203-46be-9cb1-d54db87f2459",
         "kind": "PHOTO",
         "mimeType": "image/jpeg",
         "width": 800,
@@ -532,15 +587,15 @@ export const family: FamilyTree = {
         "caption": null,
         "altText": "Chioma Eze-Adeyemi",
         "urls": {
-          "thumb": "/demo/0bb67cf2-thumb.webp",
-          "medium": "/demo/0bb67cf2-medium.webp",
-          "original": "/demo/0bb67cf2-medium.webp"
+          "thumb": "/demo/d0ee2f74-thumb.webp",
+          "medium": "/demo/d0ee2f74-medium.webp",
+          "original": "/demo/d0ee2f74-medium.webp"
         }
       },
       "sortOrder": 6
     },
     {
-      "id": "4e0514b3-22a1-4838-b2a5-698bffb432fc",
+      "id": "6991f446-9374-4bcc-a566-b1c26dd2fb50",
       "fullName": "Femi Adeyemi",
       "relationshipLabel": "Brother-in-law",
       "generation": 0,
@@ -549,7 +604,7 @@ export const family: FamilyTree = {
       "birthYear": 1958,
       "deathYear": null,
       "photo": {
-        "id": "e421891c-463b-4395-91a6-3f0299ea1a6a",
+        "id": "28f81d89-6231-4f0d-b84c-a781c657c0e1",
         "kind": "PHOTO",
         "mimeType": "image/jpeg",
         "width": 800,
@@ -557,15 +612,15 @@ export const family: FamilyTree = {
         "caption": null,
         "altText": "Femi Adeyemi",
         "urls": {
-          "thumb": "/demo/e421891c-thumb.webp",
-          "medium": "/demo/e421891c-medium.webp",
-          "original": "/demo/e421891c-medium.webp"
+          "thumb": "/demo/28f81d89-thumb.webp",
+          "medium": "/demo/28f81d89-medium.webp",
+          "original": "/demo/28f81d89-medium.webp"
         }
       },
       "sortOrder": 7
     },
     {
-      "id": "b9e5dfdf-5515-45c3-be14-06939baf85ff",
+      "id": "f31af791-e37f-4f4b-9d9c-7aa6ca0c342d",
       "fullName": "Uchenna Eze",
       "relationshipLabel": "Youngest brother",
       "generation": 0,
@@ -574,7 +629,7 @@ export const family: FamilyTree = {
       "birthYear": 1964,
       "deathYear": null,
       "photo": {
-        "id": "4c7f53e8-033e-435d-9f2e-d4f0ae5f6700",
+        "id": "b02e2d05-d291-4449-a173-37ff0bfd3a89",
         "kind": "PHOTO",
         "mimeType": "image/jpeg",
         "width": 800,
@@ -582,15 +637,15 @@ export const family: FamilyTree = {
         "caption": null,
         "altText": "Uchenna Eze",
         "urls": {
-          "thumb": "/demo/4c7f53e8-thumb.webp",
-          "medium": "/demo/4c7f53e8-medium.webp",
-          "original": "/demo/4c7f53e8-medium.webp"
+          "thumb": "/demo/b02e2d05-thumb.webp",
+          "medium": "/demo/b02e2d05-medium.webp",
+          "original": "/demo/b02e2d05-medium.webp"
         }
       },
       "sortOrder": 8
     },
     {
-      "id": "a8b56a12-4cd1-4cb2-a76c-ce34fb0b323f",
+      "id": "f246a792-ced9-41b3-9c32-a86bc1d65507",
       "fullName": "Ngozi Okonkwo-Bello",
       "relationshipLabel": "Daughter",
       "generation": 1,
@@ -599,7 +654,7 @@ export const family: FamilyTree = {
       "birthYear": 1978,
       "deathYear": null,
       "photo": {
-        "id": "56b99da9-cece-4094-81f3-fc46dd5de950",
+        "id": "d10ca07e-ccfe-4f6a-a9f3-5e309116fee3",
         "kind": "PHOTO",
         "mimeType": "image/jpeg",
         "width": 800,
@@ -607,15 +662,15 @@ export const family: FamilyTree = {
         "caption": null,
         "altText": "Ngozi Okonkwo-Bello",
         "urls": {
-          "thumb": "/demo/56b99da9-thumb.webp",
-          "medium": "/demo/56b99da9-medium.webp",
-          "original": "/demo/56b99da9-medium.webp"
+          "thumb": "/demo/d10ca07e-thumb.webp",
+          "medium": "/demo/d10ca07e-medium.webp",
+          "original": "/demo/d10ca07e-medium.webp"
         }
       },
       "sortOrder": 9
     },
     {
-      "id": "e7e806c5-3862-40c5-96bb-0ea734192a52",
+      "id": "0719fb93-c360-4c96-a299-a6dcbfe01386",
       "fullName": "Tunde Bello",
       "relationshipLabel": "Son-in-law",
       "generation": 1,
@@ -624,7 +679,7 @@ export const family: FamilyTree = {
       "birthYear": 1975,
       "deathYear": null,
       "photo": {
-        "id": "3ad88a68-3856-41f2-8f9e-813b9f2c183d",
+        "id": "39ed1eba-2a8f-47b1-ade6-edab9e3c6ad9",
         "kind": "PHOTO",
         "mimeType": "image/jpeg",
         "width": 800,
@@ -632,15 +687,15 @@ export const family: FamilyTree = {
         "caption": null,
         "altText": "Tunde Bello",
         "urls": {
-          "thumb": "/demo/3ad88a68-thumb.webp",
-          "medium": "/demo/3ad88a68-medium.webp",
-          "original": "/demo/3ad88a68-medium.webp"
+          "thumb": "/demo/39ed1eba-thumb.webp",
+          "medium": "/demo/39ed1eba-medium.webp",
+          "original": "/demo/39ed1eba-medium.webp"
         }
       },
       "sortOrder": 10
     },
     {
-      "id": "a424397b-bab2-4276-81a6-1fade7c49ed4",
+      "id": "6de5873a-7e55-46c1-892d-a3e61fc45636",
       "fullName": "Chidi Okonkwo",
       "relationshipLabel": "Son",
       "generation": 1,
@@ -649,7 +704,7 @@ export const family: FamilyTree = {
       "birthYear": 1981,
       "deathYear": null,
       "photo": {
-        "id": "a5a24c68-9964-4d79-afeb-6589e6af46bd",
+        "id": "32a4ff12-1cbd-4cb7-ba07-dbfd6f42f818",
         "kind": "PHOTO",
         "mimeType": "image/jpeg",
         "width": 800,
@@ -657,15 +712,15 @@ export const family: FamilyTree = {
         "caption": null,
         "altText": "Chidi Okonkwo",
         "urls": {
-          "thumb": "/demo/a5a24c68-thumb.webp",
-          "medium": "/demo/a5a24c68-medium.webp",
-          "original": "/demo/a5a24c68-medium.webp"
+          "thumb": "/demo/32a4ff12-thumb.webp",
+          "medium": "/demo/32a4ff12-medium.webp",
+          "original": "/demo/32a4ff12-medium.webp"
         }
       },
       "sortOrder": 11
     },
     {
-      "id": "0c428383-4e02-4272-a707-6b852746c020",
+      "id": "dd5816c0-b72d-4043-b656-b9b364283ab5",
       "fullName": "Adaora Okonkwo",
       "relationshipLabel": "Daughter-in-law",
       "generation": 1,
@@ -674,7 +729,7 @@ export const family: FamilyTree = {
       "birthYear": 1983,
       "deathYear": null,
       "photo": {
-        "id": "0554819e-40b4-4d21-b148-19f0ac30a299",
+        "id": "8eb49126-6b39-44e4-9957-daee80e966d8",
         "kind": "PHOTO",
         "mimeType": "image/jpeg",
         "width": 800,
@@ -682,15 +737,15 @@ export const family: FamilyTree = {
         "caption": null,
         "altText": "Adaora Okonkwo",
         "urls": {
-          "thumb": "/demo/0554819e-thumb.webp",
-          "medium": "/demo/0554819e-medium.webp",
-          "original": "/demo/0554819e-medium.webp"
+          "thumb": "/demo/8eb49126-thumb.webp",
+          "medium": "/demo/8eb49126-medium.webp",
+          "original": "/demo/8eb49126-medium.webp"
         }
       },
       "sortOrder": 12
     },
     {
-      "id": "94b375d5-5ce5-4b4b-b968-090ed14eee9d",
+      "id": "1564238a-894e-4473-b2d9-da3a8088fe15",
       "fullName": "Amarachi Okonkwo",
       "relationshipLabel": "Daughter",
       "generation": 1,
@@ -699,7 +754,7 @@ export const family: FamilyTree = {
       "birthYear": 1985,
       "deathYear": null,
       "photo": {
-        "id": "1473c3a7-5cb0-4c58-ba42-41e6ae11f991",
+        "id": "3ab02f87-109e-42b5-8c49-77ffeb07a9c8",
         "kind": "PHOTO",
         "mimeType": "image/jpeg",
         "width": 800,
@@ -707,15 +762,15 @@ export const family: FamilyTree = {
         "caption": null,
         "altText": "Amarachi Okonkwo",
         "urls": {
-          "thumb": "/demo/1473c3a7-thumb.webp",
-          "medium": "/demo/1473c3a7-medium.webp",
-          "original": "/demo/1473c3a7-medium.webp"
+          "thumb": "/demo/3ab02f87-thumb.webp",
+          "medium": "/demo/3ab02f87-medium.webp",
+          "original": "/demo/3ab02f87-medium.webp"
         }
       },
       "sortOrder": 13
     },
     {
-      "id": "35797418-8755-41b2-bfde-b2da731167f0",
+      "id": "77817cc4-82c1-428c-b064-dac0235a67ff",
       "fullName": "Kemi Bello-Ade",
       "relationshipLabel": "Granddaughter",
       "generation": 2,
@@ -724,7 +779,7 @@ export const family: FamilyTree = {
       "birthYear": 1999,
       "deathYear": null,
       "photo": {
-        "id": "97c7acaa-d8d8-47e6-8c65-d5464b679eca",
+        "id": "18525c22-d278-462d-bbbe-8de3ac680437",
         "kind": "PHOTO",
         "mimeType": "image/jpeg",
         "width": 800,
@@ -732,15 +787,15 @@ export const family: FamilyTree = {
         "caption": null,
         "altText": "Kemi Bello-Ade",
         "urls": {
-          "thumb": "/demo/97c7acaa-thumb.webp",
-          "medium": "/demo/97c7acaa-medium.webp",
-          "original": "/demo/97c7acaa-medium.webp"
+          "thumb": "/demo/18525c22-thumb.webp",
+          "medium": "/demo/18525c22-medium.webp",
+          "original": "/demo/18525c22-medium.webp"
         }
       },
       "sortOrder": 14
     },
     {
-      "id": "49186ed3-b376-4f67-b5ab-4c154e8e7305",
+      "id": "35cde4cd-833d-4c49-8fe9-4fedb58ab15e",
       "fullName": "David Ade",
       "relationshipLabel": "Granddaughter's husband",
       "generation": 2,
@@ -749,7 +804,7 @@ export const family: FamilyTree = {
       "birthYear": 1997,
       "deathYear": null,
       "photo": {
-        "id": "5f28319f-0762-411f-94bc-dd8de733e401",
+        "id": "f87fb606-536c-42a4-8989-5fa542b87b1a",
         "kind": "PHOTO",
         "mimeType": "image/jpeg",
         "width": 800,
@@ -757,15 +812,15 @@ export const family: FamilyTree = {
         "caption": null,
         "altText": "David Ade",
         "urls": {
-          "thumb": "/demo/5f28319f-thumb.webp",
-          "medium": "/demo/5f28319f-medium.webp",
-          "original": "/demo/5f28319f-medium.webp"
+          "thumb": "/demo/f87fb606-thumb.webp",
+          "medium": "/demo/f87fb606-medium.webp",
+          "original": "/demo/f87fb606-medium.webp"
         }
       },
       "sortOrder": 15
     },
     {
-      "id": "cf184981-05a5-4c46-b1fb-a34e5e02fb94",
+      "id": "3a8dbdab-bf0d-4e0e-b41a-c37d39fcd4e7",
       "fullName": "Tobi Bello",
       "relationshipLabel": "Grandson",
       "generation": 2,
@@ -774,7 +829,7 @@ export const family: FamilyTree = {
       "birthYear": 2002,
       "deathYear": null,
       "photo": {
-        "id": "c5687980-f47c-4949-9300-69d571a61125",
+        "id": "9187e30e-9ae1-483b-b066-d1c676005768",
         "kind": "PHOTO",
         "mimeType": "image/jpeg",
         "width": 800,
@@ -782,15 +837,15 @@ export const family: FamilyTree = {
         "caption": null,
         "altText": "Tobi Bello",
         "urls": {
-          "thumb": "/demo/c5687980-thumb.webp",
-          "medium": "/demo/c5687980-medium.webp",
-          "original": "/demo/c5687980-medium.webp"
+          "thumb": "/demo/9187e30e-thumb.webp",
+          "medium": "/demo/9187e30e-medium.webp",
+          "original": "/demo/9187e30e-medium.webp"
         }
       },
       "sortOrder": 16
     },
     {
-      "id": "fd1bea5a-a013-4b9f-aaeb-9bfe10f6093b",
+      "id": "2080069d-2ef9-4125-92c9-05ec8c04bbf4",
       "fullName": "Nneka Bello",
       "relationshipLabel": "Granddaughter",
       "generation": 2,
@@ -799,7 +854,7 @@ export const family: FamilyTree = {
       "birthYear": 2005,
       "deathYear": null,
       "photo": {
-        "id": "eaa2754d-6d26-4d7d-a185-a637175d175d",
+        "id": "c0c06aab-aa84-4847-a802-e01104585823",
         "kind": "PHOTO",
         "mimeType": "image/jpeg",
         "width": 800,
@@ -807,15 +862,15 @@ export const family: FamilyTree = {
         "caption": null,
         "altText": "Nneka Bello",
         "urls": {
-          "thumb": "/demo/eaa2754d-thumb.webp",
-          "medium": "/demo/eaa2754d-medium.webp",
-          "original": "/demo/eaa2754d-medium.webp"
+          "thumb": "/demo/c0c06aab-thumb.webp",
+          "medium": "/demo/c0c06aab-medium.webp",
+          "original": "/demo/c0c06aab-medium.webp"
         }
       },
       "sortOrder": 17
     },
     {
-      "id": "cf1fbf19-9047-4ac3-8456-78824987d4b8",
+      "id": "d7050183-4821-4364-9990-9b3934880e93",
       "fullName": "Zara Okonkwo",
       "relationshipLabel": "Granddaughter",
       "generation": 2,
@@ -824,7 +879,7 @@ export const family: FamilyTree = {
       "birthYear": 2004,
       "deathYear": null,
       "photo": {
-        "id": "af7c7afe-6411-48bd-940c-7dc261178672",
+        "id": "70383794-3fd7-41b6-847b-6720632159c4",
         "kind": "PHOTO",
         "mimeType": "image/jpeg",
         "width": 800,
@@ -832,15 +887,15 @@ export const family: FamilyTree = {
         "caption": null,
         "altText": "Zara Okonkwo",
         "urls": {
-          "thumb": "/demo/af7c7afe-thumb.webp",
-          "medium": "/demo/af7c7afe-medium.webp",
-          "original": "/demo/af7c7afe-medium.webp"
+          "thumb": "/demo/70383794-thumb.webp",
+          "medium": "/demo/70383794-medium.webp",
+          "original": "/demo/70383794-medium.webp"
         }
       },
       "sortOrder": 18
     },
     {
-      "id": "0c526f6f-d125-4f43-982a-fc99b32cdba1",
+      "id": "36cd3f2c-73d3-490e-994d-43d347dee40a",
       "fullName": "Eli Okonkwo",
       "relationshipLabel": "Grandson",
       "generation": 2,
@@ -849,7 +904,7 @@ export const family: FamilyTree = {
       "birthYear": 2008,
       "deathYear": null,
       "photo": {
-        "id": "e8477279-16f2-4fab-97f5-3371e0ccb06d",
+        "id": "d81aabf5-fbdd-48b7-946c-cc630a8be801",
         "kind": "PHOTO",
         "mimeType": "image/jpeg",
         "width": 800,
@@ -857,15 +912,15 @@ export const family: FamilyTree = {
         "caption": null,
         "altText": "Eli Okonkwo",
         "urls": {
-          "thumb": "/demo/e8477279-thumb.webp",
-          "medium": "/demo/e8477279-medium.webp",
-          "original": "/demo/e8477279-medium.webp"
+          "thumb": "/demo/d81aabf5-thumb.webp",
+          "medium": "/demo/d81aabf5-medium.webp",
+          "original": "/demo/d81aabf5-medium.webp"
         }
       },
       "sortOrder": 19
     },
     {
-      "id": "061c3ba5-711f-4d84-8de3-7e07c677c059",
+      "id": "1407f940-a161-4691-ac60-d51bdaedfb95",
       "fullName": "Adaeze Ade",
       "relationshipLabel": "Great-granddaughter",
       "generation": 3,
@@ -874,7 +929,7 @@ export const family: FamilyTree = {
       "birthYear": 2023,
       "deathYear": null,
       "photo": {
-        "id": "fb05ac9f-67ff-437d-a474-f520d39ef4ae",
+        "id": "efcf4ee0-dc37-4575-89ff-990817a08169",
         "kind": "PHOTO",
         "mimeType": "image/jpeg",
         "width": 800,
@@ -882,15 +937,15 @@ export const family: FamilyTree = {
         "caption": null,
         "altText": "Adaeze Ade",
         "urls": {
-          "thumb": "/demo/fb05ac9f-thumb.webp",
-          "medium": "/demo/fb05ac9f-medium.webp",
-          "original": "/demo/fb05ac9f-medium.webp"
+          "thumb": "/demo/efcf4ee0-thumb.webp",
+          "medium": "/demo/efcf4ee0-medium.webp",
+          "original": "/demo/efcf4ee0-medium.webp"
         }
       },
       "sortOrder": 20
     },
     {
-      "id": "b4cf2395-226c-47ad-8804-70b03b24fea0",
+      "id": "9587934e-ccb4-401c-8ade-489070aa79c1",
       "fullName": "Tomiwa Ade",
       "relationshipLabel": "Great-grandson",
       "generation": 3,
@@ -899,7 +954,7 @@ export const family: FamilyTree = {
       "birthYear": 2025,
       "deathYear": null,
       "photo": {
-        "id": "c710ac22-e4d4-4a48-9ef8-ee5bea954204",
+        "id": "72c0b9fb-6498-4b54-8cff-885a9b25a656",
         "kind": "PHOTO",
         "mimeType": "image/jpeg",
         "width": 800,
@@ -907,9 +962,9 @@ export const family: FamilyTree = {
         "caption": null,
         "altText": "Tomiwa Ade",
         "urls": {
-          "thumb": "/demo/c710ac22-thumb.webp",
-          "medium": "/demo/c710ac22-medium.webp",
-          "original": "/demo/c710ac22-medium.webp"
+          "thumb": "/demo/72c0b9fb-thumb.webp",
+          "medium": "/demo/72c0b9fb-medium.webp",
+          "original": "/demo/72c0b9fb-medium.webp"
         }
       },
       "sortOrder": 21
@@ -917,213 +972,213 @@ export const family: FamilyTree = {
   ],
   "relationships": [
     {
-      "id": "249cd526-f853-4203-bca2-a7abe3e8a6ad",
-      "fromId": "4d1dd5df-70aa-4797-b4e3-df050d65a15e",
-      "toId": "7a57d747-81ca-4eb2-be13-bfb2301e672a",
+      "id": "ec819710-744e-4a9e-91df-c5216babe422",
+      "fromId": "1e97b12c-652e-49ca-87b8-afd39c9db17b",
+      "toId": "18656c90-d347-448f-9ed4-03c351bc0f04",
       "type": "SPOUSE_OF"
     },
     {
-      "id": "fbe08498-f6e1-40da-b606-abc7030f5eee",
-      "fromId": "4d1dd5df-70aa-4797-b4e3-df050d65a15e",
-      "toId": "6944071f-2cb3-4450-a747-6cdcf143ec2b",
+      "id": "f51a2af0-c75c-41a6-8a3e-f5330aa3f810",
+      "fromId": "1e97b12c-652e-49ca-87b8-afd39c9db17b",
+      "toId": "5407bc94-69ff-4d2a-92eb-0b3711be5c75",
       "type": "PARENT_OF"
     },
     {
-      "id": "82c42c8b-13f5-4c92-a75b-827227a07148",
-      "fromId": "7a57d747-81ca-4eb2-be13-bfb2301e672a",
-      "toId": "6944071f-2cb3-4450-a747-6cdcf143ec2b",
+      "id": "88152470-90e7-43b4-a47e-9eff76eb16fd",
+      "fromId": "18656c90-d347-448f-9ed4-03c351bc0f04",
+      "toId": "5407bc94-69ff-4d2a-92eb-0b3711be5c75",
       "type": "PARENT_OF"
     },
     {
-      "id": "1a1e178c-fa44-48a5-96e0-d55bd712c318",
-      "fromId": "4d1dd5df-70aa-4797-b4e3-df050d65a15e",
-      "toId": "8a234c44-061d-4f8c-97c3-2cec113b6746",
+      "id": "dde79501-56ed-4fae-b9a2-79de67381f63",
+      "fromId": "1e97b12c-652e-49ca-87b8-afd39c9db17b",
+      "toId": "570d0bfd-4d55-41b8-b2ee-7a481232628e",
       "type": "PARENT_OF"
     },
     {
-      "id": "2103b7cd-7f1c-402b-aa9c-5a78051e2216",
-      "fromId": "7a57d747-81ca-4eb2-be13-bfb2301e672a",
-      "toId": "8a234c44-061d-4f8c-97c3-2cec113b6746",
+      "id": "eebdc6cb-cb6e-4a05-a091-474cc7b977db",
+      "fromId": "18656c90-d347-448f-9ed4-03c351bc0f04",
+      "toId": "570d0bfd-4d55-41b8-b2ee-7a481232628e",
       "type": "PARENT_OF"
     },
     {
-      "id": "299b2a0b-c50f-4340-8ef8-c684def8b275",
-      "fromId": "4d1dd5df-70aa-4797-b4e3-df050d65a15e",
-      "toId": "3213fab7-4295-4878-8ca2-94726834bd42",
+      "id": "83f84fef-4bf4-4bed-b76c-871e145bbe5b",
+      "fromId": "1e97b12c-652e-49ca-87b8-afd39c9db17b",
+      "toId": "7bd70171-d22c-402d-89df-62e5171c5256",
       "type": "PARENT_OF"
     },
     {
-      "id": "a99fafdc-6e3e-48be-b768-7db352b69862",
-      "fromId": "7a57d747-81ca-4eb2-be13-bfb2301e672a",
-      "toId": "3213fab7-4295-4878-8ca2-94726834bd42",
+      "id": "cac18c20-8550-4396-90ea-4840508c3906",
+      "fromId": "18656c90-d347-448f-9ed4-03c351bc0f04",
+      "toId": "7bd70171-d22c-402d-89df-62e5171c5256",
       "type": "PARENT_OF"
     },
     {
-      "id": "6e5ef138-1eb9-43ae-8f4c-338fe6499c44",
-      "fromId": "4d1dd5df-70aa-4797-b4e3-df050d65a15e",
-      "toId": "b9e5dfdf-5515-45c3-be14-06939baf85ff",
+      "id": "e2e9b472-a5be-448a-b674-3a58fae24819",
+      "fromId": "1e97b12c-652e-49ca-87b8-afd39c9db17b",
+      "toId": "f31af791-e37f-4f4b-9d9c-7aa6ca0c342d",
       "type": "PARENT_OF"
     },
     {
-      "id": "cab3f8ae-b4d5-45c6-841a-31dcb819db5d",
-      "fromId": "7a57d747-81ca-4eb2-be13-bfb2301e672a",
-      "toId": "b9e5dfdf-5515-45c3-be14-06939baf85ff",
+      "id": "fd336cfe-30a3-4e8f-9b5b-ec9b87a205db",
+      "fromId": "18656c90-d347-448f-9ed4-03c351bc0f04",
+      "toId": "f31af791-e37f-4f4b-9d9c-7aa6ca0c342d",
       "type": "PARENT_OF"
     },
     {
-      "id": "6c9126ab-febd-495e-a530-7d8c13b76a3c",
-      "fromId": "8a234c44-061d-4f8c-97c3-2cec113b6746",
-      "toId": "811c4beb-3d3f-451f-a136-68cd43fd2a56",
+      "id": "c290e9b0-2855-43c8-b7f6-04e41ec5e942",
+      "fromId": "570d0bfd-4d55-41b8-b2ee-7a481232628e",
+      "toId": "6bbc1138-5292-4c74-a682-2bfd6ec9606d",
       "type": "SPOUSE_OF"
     },
     {
-      "id": "12996625-26d8-47f4-9c02-4140e3de3d82",
-      "fromId": "6944071f-2cb3-4450-a747-6cdcf143ec2b",
-      "toId": "88aba4cb-fea8-4ef1-8ca5-dedaaa9367d0",
+      "id": "5c86fd85-3c78-453f-b267-d29ca7ed7548",
+      "fromId": "5407bc94-69ff-4d2a-92eb-0b3711be5c75",
+      "toId": "6cec5f29-3d1c-4148-9087-329ea1dc9839",
       "type": "SPOUSE_OF"
     },
     {
-      "id": "d32180e9-cc9a-41ac-8ef0-7e1ef20d9c10",
-      "fromId": "3213fab7-4295-4878-8ca2-94726834bd42",
-      "toId": "4e0514b3-22a1-4838-b2a5-698bffb432fc",
+      "id": "af1f2a29-b895-4d45-b6a9-6bfbf1eaf2ae",
+      "fromId": "7bd70171-d22c-402d-89df-62e5171c5256",
+      "toId": "6991f446-9374-4bcc-a566-b1c26dd2fb50",
       "type": "SPOUSE_OF"
     },
     {
-      "id": "31028a0c-3541-4886-a13c-cba4ea0e1db4",
-      "fromId": "8a234c44-061d-4f8c-97c3-2cec113b6746",
-      "toId": "a8b56a12-4cd1-4cb2-a76c-ce34fb0b323f",
+      "id": "2019ee47-36e8-4cd2-9335-9d244708b65c",
+      "fromId": "570d0bfd-4d55-41b8-b2ee-7a481232628e",
+      "toId": "f246a792-ced9-41b3-9c32-a86bc1d65507",
       "type": "PARENT_OF"
     },
     {
-      "id": "8165b353-4d69-4468-9960-0288b7b44df9",
-      "fromId": "811c4beb-3d3f-451f-a136-68cd43fd2a56",
-      "toId": "a8b56a12-4cd1-4cb2-a76c-ce34fb0b323f",
+      "id": "60556b56-b4bb-4bca-bd2e-97638370f159",
+      "fromId": "6bbc1138-5292-4c74-a682-2bfd6ec9606d",
+      "toId": "f246a792-ced9-41b3-9c32-a86bc1d65507",
       "type": "PARENT_OF"
     },
     {
-      "id": "59a4bf54-764b-4d39-bcf8-f5062ce1f6af",
-      "fromId": "8a234c44-061d-4f8c-97c3-2cec113b6746",
-      "toId": "a424397b-bab2-4276-81a6-1fade7c49ed4",
+      "id": "dd413415-8df8-438e-84b8-87cf3e5584d2",
+      "fromId": "570d0bfd-4d55-41b8-b2ee-7a481232628e",
+      "toId": "6de5873a-7e55-46c1-892d-a3e61fc45636",
       "type": "PARENT_OF"
     },
     {
-      "id": "51e0f684-c26b-4501-8959-6c700eab0d36",
-      "fromId": "811c4beb-3d3f-451f-a136-68cd43fd2a56",
-      "toId": "a424397b-bab2-4276-81a6-1fade7c49ed4",
+      "id": "b8a69dd3-3305-478e-a69e-fa3b113f3bf5",
+      "fromId": "6bbc1138-5292-4c74-a682-2bfd6ec9606d",
+      "toId": "6de5873a-7e55-46c1-892d-a3e61fc45636",
       "type": "PARENT_OF"
     },
     {
-      "id": "3293c22e-d6bd-4a53-8f04-c7fa57ab1e5a",
-      "fromId": "8a234c44-061d-4f8c-97c3-2cec113b6746",
-      "toId": "94b375d5-5ce5-4b4b-b968-090ed14eee9d",
+      "id": "fce10616-cf70-4f4b-8c69-e114cc1d2363",
+      "fromId": "570d0bfd-4d55-41b8-b2ee-7a481232628e",
+      "toId": "1564238a-894e-4473-b2d9-da3a8088fe15",
       "type": "PARENT_OF"
     },
     {
-      "id": "ba9dafcb-985a-4deb-8b42-1ee49805fc41",
-      "fromId": "811c4beb-3d3f-451f-a136-68cd43fd2a56",
-      "toId": "94b375d5-5ce5-4b4b-b968-090ed14eee9d",
+      "id": "62d58c04-4faa-4f42-a906-2af555e16f1e",
+      "fromId": "6bbc1138-5292-4c74-a682-2bfd6ec9606d",
+      "toId": "1564238a-894e-4473-b2d9-da3a8088fe15",
       "type": "PARENT_OF"
     },
     {
-      "id": "e95bcd4a-b0c4-44df-a7c2-51ed5f92217d",
-      "fromId": "a8b56a12-4cd1-4cb2-a76c-ce34fb0b323f",
-      "toId": "e7e806c5-3862-40c5-96bb-0ea734192a52",
+      "id": "79aa3a07-bc1d-4884-86e6-c1da077623d9",
+      "fromId": "f246a792-ced9-41b3-9c32-a86bc1d65507",
+      "toId": "0719fb93-c360-4c96-a299-a6dcbfe01386",
       "type": "SPOUSE_OF"
     },
     {
-      "id": "198a475b-9116-4a34-bfe7-6af3db69bd12",
-      "fromId": "a424397b-bab2-4276-81a6-1fade7c49ed4",
-      "toId": "0c428383-4e02-4272-a707-6b852746c020",
+      "id": "8f8f99f6-e6ec-4634-843b-48a62956496f",
+      "fromId": "6de5873a-7e55-46c1-892d-a3e61fc45636",
+      "toId": "dd5816c0-b72d-4043-b656-b9b364283ab5",
       "type": "SPOUSE_OF"
     },
     {
-      "id": "8fb131eb-fe9e-47f8-a478-17dad50a33e9",
-      "fromId": "a8b56a12-4cd1-4cb2-a76c-ce34fb0b323f",
-      "toId": "35797418-8755-41b2-bfde-b2da731167f0",
+      "id": "24083266-816f-45e9-a0ba-26896eb1548d",
+      "fromId": "f246a792-ced9-41b3-9c32-a86bc1d65507",
+      "toId": "77817cc4-82c1-428c-b064-dac0235a67ff",
       "type": "PARENT_OF"
     },
     {
-      "id": "05ba054c-fc0c-485a-b7e6-aa4a0ddfac15",
-      "fromId": "e7e806c5-3862-40c5-96bb-0ea734192a52",
-      "toId": "35797418-8755-41b2-bfde-b2da731167f0",
+      "id": "4e779fb4-b66c-4688-a49f-d617203d884d",
+      "fromId": "0719fb93-c360-4c96-a299-a6dcbfe01386",
+      "toId": "77817cc4-82c1-428c-b064-dac0235a67ff",
       "type": "PARENT_OF"
     },
     {
-      "id": "56b5c623-d754-4e74-b5ff-6fd57c3908dd",
-      "fromId": "a8b56a12-4cd1-4cb2-a76c-ce34fb0b323f",
-      "toId": "cf184981-05a5-4c46-b1fb-a34e5e02fb94",
+      "id": "84fd1346-8e8c-4138-927d-dbd70490d8f3",
+      "fromId": "f246a792-ced9-41b3-9c32-a86bc1d65507",
+      "toId": "3a8dbdab-bf0d-4e0e-b41a-c37d39fcd4e7",
       "type": "PARENT_OF"
     },
     {
-      "id": "a352c3ed-04bd-4579-b959-48b77860d18d",
-      "fromId": "e7e806c5-3862-40c5-96bb-0ea734192a52",
-      "toId": "cf184981-05a5-4c46-b1fb-a34e5e02fb94",
+      "id": "2c79b6c8-34c2-4865-9a99-a216e9aa72a9",
+      "fromId": "0719fb93-c360-4c96-a299-a6dcbfe01386",
+      "toId": "3a8dbdab-bf0d-4e0e-b41a-c37d39fcd4e7",
       "type": "PARENT_OF"
     },
     {
-      "id": "5fa78e29-ea7b-4cca-bf0f-3d947ca8d51f",
-      "fromId": "a8b56a12-4cd1-4cb2-a76c-ce34fb0b323f",
-      "toId": "fd1bea5a-a013-4b9f-aaeb-9bfe10f6093b",
+      "id": "259cf7de-6078-4b2a-b4ae-32d28716e915",
+      "fromId": "f246a792-ced9-41b3-9c32-a86bc1d65507",
+      "toId": "2080069d-2ef9-4125-92c9-05ec8c04bbf4",
       "type": "PARENT_OF"
     },
     {
-      "id": "447f0384-8ccb-4148-bafb-eedc2c7917f0",
-      "fromId": "e7e806c5-3862-40c5-96bb-0ea734192a52",
-      "toId": "fd1bea5a-a013-4b9f-aaeb-9bfe10f6093b",
+      "id": "04323b41-5307-47f0-8343-acc6568de3de",
+      "fromId": "0719fb93-c360-4c96-a299-a6dcbfe01386",
+      "toId": "2080069d-2ef9-4125-92c9-05ec8c04bbf4",
       "type": "PARENT_OF"
     },
     {
-      "id": "b188a81d-c9fd-4576-a1aa-6d209380565b",
-      "fromId": "a424397b-bab2-4276-81a6-1fade7c49ed4",
-      "toId": "cf1fbf19-9047-4ac3-8456-78824987d4b8",
+      "id": "8b31759f-0a7e-4584-8ad1-3b9a1fd85016",
+      "fromId": "6de5873a-7e55-46c1-892d-a3e61fc45636",
+      "toId": "d7050183-4821-4364-9990-9b3934880e93",
       "type": "PARENT_OF"
     },
     {
-      "id": "ce94754f-d2f3-47e1-a40d-27f1c532b54f",
-      "fromId": "0c428383-4e02-4272-a707-6b852746c020",
-      "toId": "cf1fbf19-9047-4ac3-8456-78824987d4b8",
+      "id": "9b4860c9-41ca-4aa5-9f79-09f2b7df26fb",
+      "fromId": "dd5816c0-b72d-4043-b656-b9b364283ab5",
+      "toId": "d7050183-4821-4364-9990-9b3934880e93",
       "type": "PARENT_OF"
     },
     {
-      "id": "2bfbed4c-6bd6-4ce6-bc4e-bae8f8ec92d3",
-      "fromId": "a424397b-bab2-4276-81a6-1fade7c49ed4",
-      "toId": "0c526f6f-d125-4f43-982a-fc99b32cdba1",
+      "id": "44d86e46-e0c2-4cf5-84b5-0b849438ee2b",
+      "fromId": "6de5873a-7e55-46c1-892d-a3e61fc45636",
+      "toId": "36cd3f2c-73d3-490e-994d-43d347dee40a",
       "type": "PARENT_OF"
     },
     {
-      "id": "3fdbd8d9-2e2b-4123-afa1-b39bbb0dc6c2",
-      "fromId": "0c428383-4e02-4272-a707-6b852746c020",
-      "toId": "0c526f6f-d125-4f43-982a-fc99b32cdba1",
+      "id": "d493d9d9-adf2-42c3-b351-233afb018117",
+      "fromId": "dd5816c0-b72d-4043-b656-b9b364283ab5",
+      "toId": "36cd3f2c-73d3-490e-994d-43d347dee40a",
       "type": "PARENT_OF"
     },
     {
-      "id": "9630b668-5bc7-410a-8984-1c36cd1e2bc0",
-      "fromId": "35797418-8755-41b2-bfde-b2da731167f0",
-      "toId": "49186ed3-b376-4f67-b5ab-4c154e8e7305",
+      "id": "990548af-6f31-4367-8510-31581158368a",
+      "fromId": "77817cc4-82c1-428c-b064-dac0235a67ff",
+      "toId": "35cde4cd-833d-4c49-8fe9-4fedb58ab15e",
       "type": "SPOUSE_OF"
     },
     {
-      "id": "268fa9cc-9d3a-4241-9f5c-bf2b90a24545",
-      "fromId": "35797418-8755-41b2-bfde-b2da731167f0",
-      "toId": "061c3ba5-711f-4d84-8de3-7e07c677c059",
+      "id": "900ae127-26ee-44a9-a798-a2a90b8fdb82",
+      "fromId": "77817cc4-82c1-428c-b064-dac0235a67ff",
+      "toId": "1407f940-a161-4691-ac60-d51bdaedfb95",
       "type": "PARENT_OF"
     },
     {
-      "id": "f9e7b525-48a0-4e1f-b106-5b2ba3a49fa2",
-      "fromId": "49186ed3-b376-4f67-b5ab-4c154e8e7305",
-      "toId": "061c3ba5-711f-4d84-8de3-7e07c677c059",
+      "id": "3c69aa1d-061e-439f-a4a4-a17238aa7f57",
+      "fromId": "35cde4cd-833d-4c49-8fe9-4fedb58ab15e",
+      "toId": "1407f940-a161-4691-ac60-d51bdaedfb95",
       "type": "PARENT_OF"
     },
     {
-      "id": "47125032-1ed1-4026-acdb-f2e0d0787780",
-      "fromId": "35797418-8755-41b2-bfde-b2da731167f0",
-      "toId": "b4cf2395-226c-47ad-8804-70b03b24fea0",
+      "id": "7a152d25-f6b6-46e6-8607-3f3de08976bd",
+      "fromId": "77817cc4-82c1-428c-b064-dac0235a67ff",
+      "toId": "9587934e-ccb4-401c-8ade-489070aa79c1",
       "type": "PARENT_OF"
     },
     {
-      "id": "87a74199-445e-4df8-9e05-caf83172ff0b",
-      "fromId": "49186ed3-b376-4f67-b5ab-4c154e8e7305",
-      "toId": "b4cf2395-226c-47ad-8804-70b03b24fea0",
+      "id": "6f2d51a5-d18b-4948-99fe-312b122c23a6",
+      "fromId": "35cde4cd-833d-4c49-8fe9-4fedb58ab15e",
+      "toId": "9587934e-ccb4-401c-8ade-489070aa79c1",
       "type": "PARENT_OF"
     }
   ]
@@ -1131,12 +1186,12 @@ export const family: FamilyTree = {
 
 export const albums: AlbumSummary[] = [
   {
-    "id": "fc250714-4587-404a-af53-8ebe9354c948",
+    "id": "5701beb4-12ef-4d6a-abcf-859a09c6c294",
     "slug": "childhood",
     "title": "Childhood",
     "description": "Enugu in the 1960s: the bookshop, the schoolyard and the long walk home.",
     "cover": {
-      "id": "d2d36a25-bbf0-485a-9d04-a30270eee67b",
+      "id": "0d31a591-04c6-4ace-8479-2ef19f082f8d",
       "kind": "PHOTO",
       "mimeType": "image/jpeg",
       "width": 1600,
@@ -1144,21 +1199,21 @@ export const albums: AlbumSummary[] = [
       "caption": "Childhood, photograph 1",
       "altText": "Childhood: a demo photograph",
       "urls": {
-        "thumb": "/demo/d2d36a25-thumb.webp",
-        "medium": "/demo/d2d36a25-medium.webp",
-        "original": "/demo/d2d36a25-medium.webp"
+        "thumb": "/demo/0d31a591-thumb.webp",
+        "medium": "/demo/0d31a591-medium.webp",
+        "original": "/demo/0d31a591-medium.webp"
       }
     },
     "mediaCount": 5,
     "sortOrder": 0
   },
   {
-    "id": "98a25dd8-f975-4561-ba85-0a3e589ba445",
+    "id": "d8a22348-f56a-44d4-9976-1633272f153f",
     "slug": "family",
     "title": "Family",
     "description": "Weddings, christenings and a great many Sunday lunches.",
     "cover": {
-      "id": "67e31402-9459-4ff1-a19a-fe2223a63d30",
+      "id": "a526c729-6c0b-4ffa-98ba-5af1a60e9c34",
       "kind": "PHOTO",
       "mimeType": "image/jpeg",
       "width": 1600,
@@ -1166,21 +1221,21 @@ export const albums: AlbumSummary[] = [
       "caption": "Family, photograph 1",
       "altText": "Family: a demo photograph",
       "urls": {
-        "thumb": "/demo/67e31402-thumb.webp",
-        "medium": "/demo/67e31402-medium.webp",
-        "original": "/demo/67e31402-medium.webp"
+        "thumb": "/demo/a526c729-thumb.webp",
+        "medium": "/demo/a526c729-medium.webp",
+        "original": "/demo/a526c729-medium.webp"
       }
     },
     "mediaCount": 6,
     "sortOrder": 1
   },
   {
-    "id": "a99e2998-ad9a-4865-bdcd-f9a90049328d",
+    "id": "67444c27-c629-4090-afbd-ce2df6a6962e",
     "slug": "career",
     "title": "Career",
     "description": "Thirty-five years of medicine, teaching and mentoring.",
     "cover": {
-      "id": "463f8cda-4c3f-438c-99c5-5429af2c8482",
+      "id": "21819635-5f93-4c5f-ad9f-bc972c33f494",
       "kind": "PHOTO",
       "mimeType": "image/jpeg",
       "width": 1600,
@@ -1188,21 +1243,21 @@ export const albums: AlbumSummary[] = [
       "caption": "Career, photograph 1",
       "altText": "Career: a demo photograph",
       "urls": {
-        "thumb": "/demo/463f8cda-thumb.webp",
-        "medium": "/demo/463f8cda-medium.webp",
-        "original": "/demo/463f8cda-medium.webp"
+        "thumb": "/demo/21819635-thumb.webp",
+        "medium": "/demo/21819635-medium.webp",
+        "original": "/demo/21819635-medium.webp"
       }
     },
     "mediaCount": 5,
     "sortOrder": 2
   },
   {
-    "id": "e13698ae-a0ec-4883-96b4-94d27f7aab7b",
+    "id": "7cfbc128-b0bd-43a4-87c2-ace7ca65c9c8",
     "slug": "friends",
     "title": "Friends",
     "description": "Classmates, colleagues and choir companions of many decades.",
     "cover": {
-      "id": "2041fa01-01f3-4719-8a0e-f8c79bf38e3e",
+      "id": "f61ca574-e097-4d8f-94fe-c6b44b6372a4",
       "kind": "PHOTO",
       "mimeType": "image/jpeg",
       "width": 1600,
@@ -1210,21 +1265,21 @@ export const albums: AlbumSummary[] = [
       "caption": "Friends, photograph 1",
       "altText": "Friends: a demo photograph",
       "urls": {
-        "thumb": "/demo/2041fa01-thumb.webp",
-        "medium": "/demo/2041fa01-medium.webp",
-        "original": "/demo/2041fa01-medium.webp"
+        "thumb": "/demo/f61ca574-thumb.webp",
+        "medium": "/demo/f61ca574-medium.webp",
+        "original": "/demo/f61ca574-medium.webp"
       }
     },
     "mediaCount": 5,
     "sortOrder": 3
   },
   {
-    "id": "3d96ee20-e9fe-4500-bef5-571c0ebb41bd",
+    "id": "5f529a23-f9b8-47c0-991c-56e75e130340",
     "slug": "special-memories",
     "title": "Special Memories",
     "description": "The moments the family returns to again and again.",
     "cover": {
-      "id": "104c5d11-fe03-475b-9294-a0ca512611db",
+      "id": "6c6854b4-9957-4b97-b1dd-855acbc5bac0",
       "kind": "PHOTO",
       "mimeType": "image/jpeg",
       "width": 1600,
@@ -1232,21 +1287,21 @@ export const albums: AlbumSummary[] = [
       "caption": "Special Memories, photograph 1",
       "altText": "Special Memories: a demo photograph",
       "urls": {
-        "thumb": "/demo/104c5d11-thumb.webp",
-        "medium": "/demo/104c5d11-medium.webp",
-        "original": "/demo/104c5d11-medium.webp"
+        "thumb": "/demo/6c6854b4-thumb.webp",
+        "medium": "/demo/6c6854b4-medium.webp",
+        "original": "/demo/6c6854b4-medium.webp"
       }
     },
     "mediaCount": 5,
     "sortOrder": 4
   },
   {
-    "id": "83b6abfa-8119-41d3-af32-0014660a8c3e",
+    "id": "b32d37ef-dab2-45d0-9f9a-84a96c454407",
     "slug": "recent-photos",
     "title": "Recent Photos",
     "description": "The last few years, with the grandchildren in charge.",
     "cover": {
-      "id": "02d71f63-57df-4246-ae31-47ddd073f261",
+      "id": "0da29d16-21e8-4d50-8762-a4cbf30aa96f",
       "kind": "PHOTO",
       "mimeType": "image/jpeg",
       "width": 1600,
@@ -1254,9 +1309,9 @@ export const albums: AlbumSummary[] = [
       "caption": "Recent Photos, photograph 1",
       "altText": "Recent Photos: a demo photograph",
       "urls": {
-        "thumb": "/demo/02d71f63-thumb.webp",
-        "medium": "/demo/02d71f63-medium.webp",
-        "original": "/demo/02d71f63-medium.webp"
+        "thumb": "/demo/0da29d16-thumb.webp",
+        "medium": "/demo/0da29d16-medium.webp",
+        "original": "/demo/0da29d16-medium.webp"
       }
     },
     "mediaCount": 6,
@@ -1266,12 +1321,12 @@ export const albums: AlbumSummary[] = [
 
 export const albumDetails: Record<string, AlbumDetail> = {
   "childhood": {
-    "id": "fc250714-4587-404a-af53-8ebe9354c948",
+    "id": "5701beb4-12ef-4d6a-abcf-859a09c6c294",
     "slug": "childhood",
     "title": "Childhood",
     "description": "Enugu in the 1960s: the bookshop, the schoolyard and the long walk home.",
     "cover": {
-      "id": "d2d36a25-bbf0-485a-9d04-a30270eee67b",
+      "id": "0d31a591-04c6-4ace-8479-2ef19f082f8d",
       "kind": "PHOTO",
       "mimeType": "image/jpeg",
       "width": 1600,
@@ -1279,21 +1334,21 @@ export const albumDetails: Record<string, AlbumDetail> = {
       "caption": "Childhood, photograph 1",
       "altText": "Childhood: a demo photograph",
       "urls": {
-        "thumb": "/demo/d2d36a25-thumb.webp",
-        "medium": "/demo/d2d36a25-medium.webp",
-        "original": "/demo/d2d36a25-medium.webp"
+        "thumb": "/demo/0d31a591-thumb.webp",
+        "medium": "/demo/0d31a591-medium.webp",
+        "original": "/demo/0d31a591-medium.webp"
       }
     },
     "mediaCount": 5,
     "sortOrder": 0
   },
   "family": {
-    "id": "98a25dd8-f975-4561-ba85-0a3e589ba445",
+    "id": "d8a22348-f56a-44d4-9976-1633272f153f",
     "slug": "family",
     "title": "Family",
     "description": "Weddings, christenings and a great many Sunday lunches.",
     "cover": {
-      "id": "67e31402-9459-4ff1-a19a-fe2223a63d30",
+      "id": "a526c729-6c0b-4ffa-98ba-5af1a60e9c34",
       "kind": "PHOTO",
       "mimeType": "image/jpeg",
       "width": 1600,
@@ -1301,21 +1356,21 @@ export const albumDetails: Record<string, AlbumDetail> = {
       "caption": "Family, photograph 1",
       "altText": "Family: a demo photograph",
       "urls": {
-        "thumb": "/demo/67e31402-thumb.webp",
-        "medium": "/demo/67e31402-medium.webp",
-        "original": "/demo/67e31402-medium.webp"
+        "thumb": "/demo/a526c729-thumb.webp",
+        "medium": "/demo/a526c729-medium.webp",
+        "original": "/demo/a526c729-medium.webp"
       }
     },
     "mediaCount": 6,
     "sortOrder": 1
   },
   "career": {
-    "id": "a99e2998-ad9a-4865-bdcd-f9a90049328d",
+    "id": "67444c27-c629-4090-afbd-ce2df6a6962e",
     "slug": "career",
     "title": "Career",
     "description": "Thirty-five years of medicine, teaching and mentoring.",
     "cover": {
-      "id": "463f8cda-4c3f-438c-99c5-5429af2c8482",
+      "id": "21819635-5f93-4c5f-ad9f-bc972c33f494",
       "kind": "PHOTO",
       "mimeType": "image/jpeg",
       "width": 1600,
@@ -1323,21 +1378,21 @@ export const albumDetails: Record<string, AlbumDetail> = {
       "caption": "Career, photograph 1",
       "altText": "Career: a demo photograph",
       "urls": {
-        "thumb": "/demo/463f8cda-thumb.webp",
-        "medium": "/demo/463f8cda-medium.webp",
-        "original": "/demo/463f8cda-medium.webp"
+        "thumb": "/demo/21819635-thumb.webp",
+        "medium": "/demo/21819635-medium.webp",
+        "original": "/demo/21819635-medium.webp"
       }
     },
     "mediaCount": 5,
     "sortOrder": 2
   },
   "friends": {
-    "id": "e13698ae-a0ec-4883-96b4-94d27f7aab7b",
+    "id": "7cfbc128-b0bd-43a4-87c2-ace7ca65c9c8",
     "slug": "friends",
     "title": "Friends",
     "description": "Classmates, colleagues and choir companions of many decades.",
     "cover": {
-      "id": "2041fa01-01f3-4719-8a0e-f8c79bf38e3e",
+      "id": "f61ca574-e097-4d8f-94fe-c6b44b6372a4",
       "kind": "PHOTO",
       "mimeType": "image/jpeg",
       "width": 1600,
@@ -1345,21 +1400,21 @@ export const albumDetails: Record<string, AlbumDetail> = {
       "caption": "Friends, photograph 1",
       "altText": "Friends: a demo photograph",
       "urls": {
-        "thumb": "/demo/2041fa01-thumb.webp",
-        "medium": "/demo/2041fa01-medium.webp",
-        "original": "/demo/2041fa01-medium.webp"
+        "thumb": "/demo/f61ca574-thumb.webp",
+        "medium": "/demo/f61ca574-medium.webp",
+        "original": "/demo/f61ca574-medium.webp"
       }
     },
     "mediaCount": 5,
     "sortOrder": 3
   },
   "special-memories": {
-    "id": "3d96ee20-e9fe-4500-bef5-571c0ebb41bd",
+    "id": "5f529a23-f9b8-47c0-991c-56e75e130340",
     "slug": "special-memories",
     "title": "Special Memories",
     "description": "The moments the family returns to again and again.",
     "cover": {
-      "id": "104c5d11-fe03-475b-9294-a0ca512611db",
+      "id": "6c6854b4-9957-4b97-b1dd-855acbc5bac0",
       "kind": "PHOTO",
       "mimeType": "image/jpeg",
       "width": 1600,
@@ -1367,21 +1422,21 @@ export const albumDetails: Record<string, AlbumDetail> = {
       "caption": "Special Memories, photograph 1",
       "altText": "Special Memories: a demo photograph",
       "urls": {
-        "thumb": "/demo/104c5d11-thumb.webp",
-        "medium": "/demo/104c5d11-medium.webp",
-        "original": "/demo/104c5d11-medium.webp"
+        "thumb": "/demo/6c6854b4-thumb.webp",
+        "medium": "/demo/6c6854b4-medium.webp",
+        "original": "/demo/6c6854b4-medium.webp"
       }
     },
     "mediaCount": 5,
     "sortOrder": 4
   },
   "recent-photos": {
-    "id": "83b6abfa-8119-41d3-af32-0014660a8c3e",
+    "id": "b32d37ef-dab2-45d0-9f9a-84a96c454407",
     "slug": "recent-photos",
     "title": "Recent Photos",
     "description": "The last few years, with the grandchildren in charge.",
     "cover": {
-      "id": "02d71f63-57df-4246-ae31-47ddd073f261",
+      "id": "0da29d16-21e8-4d50-8762-a4cbf30aa96f",
       "kind": "PHOTO",
       "mimeType": "image/jpeg",
       "width": 1600,
@@ -1389,9 +1444,9 @@ export const albumDetails: Record<string, AlbumDetail> = {
       "caption": "Recent Photos, photograph 1",
       "altText": "Recent Photos: a demo photograph",
       "urls": {
-        "thumb": "/demo/02d71f63-thumb.webp",
-        "medium": "/demo/02d71f63-medium.webp",
-        "original": "/demo/02d71f63-medium.webp"
+        "thumb": "/demo/0da29d16-thumb.webp",
+        "medium": "/demo/0da29d16-medium.webp",
+        "original": "/demo/0da29d16-medium.webp"
       }
     },
     "mediaCount": 6,
@@ -1404,7 +1459,7 @@ export const albumMedia: Record<string, Paginated<PublicMedia>> = {
   "childhood": {
     "items": [
       {
-        "id": "d2d36a25-bbf0-485a-9d04-a30270eee67b",
+        "id": "0d31a591-04c6-4ace-8479-2ef19f082f8d",
         "kind": "PHOTO",
         "mimeType": "image/jpeg",
         "width": 1600,
@@ -1412,13 +1467,13 @@ export const albumMedia: Record<string, Paginated<PublicMedia>> = {
         "caption": "Childhood, photograph 1",
         "altText": "Childhood: a demo photograph",
         "urls": {
-          "thumb": "/demo/d2d36a25-thumb.webp",
-          "medium": "/demo/d2d36a25-medium.webp",
-          "original": "/demo/d2d36a25-medium.webp"
+          "thumb": "/demo/0d31a591-thumb.webp",
+          "medium": "/demo/0d31a591-medium.webp",
+          "original": "/demo/0d31a591-medium.webp"
         }
       },
       {
-        "id": "45a8fba0-35ae-45da-95eb-64f659045c5f",
+        "id": "65f79fe9-668b-4336-887a-573e5b67070c",
         "kind": "PHOTO",
         "mimeType": "image/jpeg",
         "width": 1067,
@@ -1426,13 +1481,13 @@ export const albumMedia: Record<string, Paginated<PublicMedia>> = {
         "caption": "Childhood, photograph 2",
         "altText": "Childhood: a demo photograph",
         "urls": {
-          "thumb": "/demo/45a8fba0-thumb.webp",
-          "medium": "/demo/45a8fba0-medium.webp",
-          "original": "/demo/45a8fba0-medium.webp"
+          "thumb": "/demo/65f79fe9-thumb.webp",
+          "medium": "/demo/65f79fe9-medium.webp",
+          "original": "/demo/65f79fe9-medium.webp"
         }
       },
       {
-        "id": "5704520e-fd49-45d2-8e71-a15039895759",
+        "id": "342ef206-27c9-4850-8219-d58376c5e4cc",
         "kind": "PHOTO",
         "mimeType": "image/jpeg",
         "width": 1600,
@@ -1440,13 +1495,13 @@ export const albumMedia: Record<string, Paginated<PublicMedia>> = {
         "caption": "Childhood, photograph 3",
         "altText": "Childhood: a demo photograph",
         "urls": {
-          "thumb": "/demo/5704520e-thumb.webp",
-          "medium": "/demo/5704520e-medium.webp",
-          "original": "/demo/5704520e-medium.webp"
+          "thumb": "/demo/342ef206-thumb.webp",
+          "medium": "/demo/342ef206-medium.webp",
+          "original": "/demo/342ef206-medium.webp"
         }
       },
       {
-        "id": "da896e37-5194-4606-b352-c8cca538846d",
+        "id": "5c2ed230-2f29-4b15-8ad0-31d9e79c0983",
         "kind": "PHOTO",
         "mimeType": "image/jpeg",
         "width": 1600,
@@ -1454,13 +1509,13 @@ export const albumMedia: Record<string, Paginated<PublicMedia>> = {
         "caption": "Childhood, photograph 4",
         "altText": "Childhood: a demo photograph",
         "urls": {
-          "thumb": "/demo/da896e37-thumb.webp",
-          "medium": "/demo/da896e37-medium.webp",
-          "original": "/demo/da896e37-medium.webp"
+          "thumb": "/demo/5c2ed230-thumb.webp",
+          "medium": "/demo/5c2ed230-medium.webp",
+          "original": "/demo/5c2ed230-medium.webp"
         }
       },
       {
-        "id": "e90212c0-c84e-4efd-b745-dc68ecf342a7",
+        "id": "320b24e8-d4bb-435c-a77a-2405fefb92be",
         "kind": "PHOTO",
         "mimeType": "image/jpeg",
         "width": 1067,
@@ -1468,9 +1523,9 @@ export const albumMedia: Record<string, Paginated<PublicMedia>> = {
         "caption": "Childhood, photograph 5",
         "altText": "Childhood: a demo photograph",
         "urls": {
-          "thumb": "/demo/e90212c0-thumb.webp",
-          "medium": "/demo/e90212c0-medium.webp",
-          "original": "/demo/e90212c0-medium.webp"
+          "thumb": "/demo/320b24e8-thumb.webp",
+          "medium": "/demo/320b24e8-medium.webp",
+          "original": "/demo/320b24e8-medium.webp"
         }
       }
     ],
@@ -1482,7 +1537,7 @@ export const albumMedia: Record<string, Paginated<PublicMedia>> = {
   "family": {
     "items": [
       {
-        "id": "67e31402-9459-4ff1-a19a-fe2223a63d30",
+        "id": "a526c729-6c0b-4ffa-98ba-5af1a60e9c34",
         "kind": "PHOTO",
         "mimeType": "image/jpeg",
         "width": 1600,
@@ -1490,13 +1545,13 @@ export const albumMedia: Record<string, Paginated<PublicMedia>> = {
         "caption": "Family, photograph 1",
         "altText": "Family: a demo photograph",
         "urls": {
-          "thumb": "/demo/67e31402-thumb.webp",
-          "medium": "/demo/67e31402-medium.webp",
-          "original": "/demo/67e31402-medium.webp"
+          "thumb": "/demo/a526c729-thumb.webp",
+          "medium": "/demo/a526c729-medium.webp",
+          "original": "/demo/a526c729-medium.webp"
         }
       },
       {
-        "id": "4d9398f5-b110-4f58-ae74-ad43f7617ec3",
+        "id": "e611bb64-1ccf-4bd1-8f3f-becc8049d92b",
         "kind": "PHOTO",
         "mimeType": "image/jpeg",
         "width": 1067,
@@ -1504,13 +1559,13 @@ export const albumMedia: Record<string, Paginated<PublicMedia>> = {
         "caption": "Family, photograph 2",
         "altText": "Family: a demo photograph",
         "urls": {
-          "thumb": "/demo/4d9398f5-thumb.webp",
-          "medium": "/demo/4d9398f5-medium.webp",
-          "original": "/demo/4d9398f5-medium.webp"
+          "thumb": "/demo/e611bb64-thumb.webp",
+          "medium": "/demo/e611bb64-medium.webp",
+          "original": "/demo/e611bb64-medium.webp"
         }
       },
       {
-        "id": "d4657922-2942-43c7-8fb6-d202234e7be7",
+        "id": "8ee1881e-f5bc-40f8-9064-22889bbaeb86",
         "kind": "PHOTO",
         "mimeType": "image/jpeg",
         "width": 1600,
@@ -1518,13 +1573,13 @@ export const albumMedia: Record<string, Paginated<PublicMedia>> = {
         "caption": "Family, photograph 3",
         "altText": "Family: a demo photograph",
         "urls": {
-          "thumb": "/demo/d4657922-thumb.webp",
-          "medium": "/demo/d4657922-medium.webp",
-          "original": "/demo/d4657922-medium.webp"
+          "thumb": "/demo/8ee1881e-thumb.webp",
+          "medium": "/demo/8ee1881e-medium.webp",
+          "original": "/demo/8ee1881e-medium.webp"
         }
       },
       {
-        "id": "dcf4c4af-9e6c-498d-9e71-0d546ce7d833",
+        "id": "7526e259-d4a6-4852-81cf-80cf4ceae709",
         "kind": "PHOTO",
         "mimeType": "image/jpeg",
         "width": 1600,
@@ -1532,13 +1587,13 @@ export const albumMedia: Record<string, Paginated<PublicMedia>> = {
         "caption": "Family, photograph 4",
         "altText": "Family: a demo photograph",
         "urls": {
-          "thumb": "/demo/dcf4c4af-thumb.webp",
-          "medium": "/demo/dcf4c4af-medium.webp",
-          "original": "/demo/dcf4c4af-medium.webp"
+          "thumb": "/demo/7526e259-thumb.webp",
+          "medium": "/demo/7526e259-medium.webp",
+          "original": "/demo/7526e259-medium.webp"
         }
       },
       {
-        "id": "d89c21ce-b62b-451e-b390-0eac69fc60f5",
+        "id": "d2954f45-7f1a-4d61-ba09-ff25e6e7faf5",
         "kind": "PHOTO",
         "mimeType": "image/jpeg",
         "width": 1067,
@@ -1546,13 +1601,13 @@ export const albumMedia: Record<string, Paginated<PublicMedia>> = {
         "caption": "Family, photograph 5",
         "altText": "Family: a demo photograph",
         "urls": {
-          "thumb": "/demo/d89c21ce-thumb.webp",
-          "medium": "/demo/d89c21ce-medium.webp",
-          "original": "/demo/d89c21ce-medium.webp"
+          "thumb": "/demo/d2954f45-thumb.webp",
+          "medium": "/demo/d2954f45-medium.webp",
+          "original": "/demo/d2954f45-medium.webp"
         }
       },
       {
-        "id": "488878b1-d3c5-46c6-8e27-d820788f2940",
+        "id": "3d2e61db-7e3e-434c-a973-33987d439ea0",
         "kind": "PHOTO",
         "mimeType": "image/jpeg",
         "width": 1600,
@@ -1560,9 +1615,9 @@ export const albumMedia: Record<string, Paginated<PublicMedia>> = {
         "caption": "Family, photograph 6",
         "altText": "Family: a demo photograph",
         "urls": {
-          "thumb": "/demo/488878b1-thumb.webp",
-          "medium": "/demo/488878b1-medium.webp",
-          "original": "/demo/488878b1-medium.webp"
+          "thumb": "/demo/3d2e61db-thumb.webp",
+          "medium": "/demo/3d2e61db-medium.webp",
+          "original": "/demo/3d2e61db-medium.webp"
         }
       }
     ],
@@ -1574,7 +1629,7 @@ export const albumMedia: Record<string, Paginated<PublicMedia>> = {
   "career": {
     "items": [
       {
-        "id": "463f8cda-4c3f-438c-99c5-5429af2c8482",
+        "id": "21819635-5f93-4c5f-ad9f-bc972c33f494",
         "kind": "PHOTO",
         "mimeType": "image/jpeg",
         "width": 1600,
@@ -1582,13 +1637,13 @@ export const albumMedia: Record<string, Paginated<PublicMedia>> = {
         "caption": "Career, photograph 1",
         "altText": "Career: a demo photograph",
         "urls": {
-          "thumb": "/demo/463f8cda-thumb.webp",
-          "medium": "/demo/463f8cda-medium.webp",
-          "original": "/demo/463f8cda-medium.webp"
+          "thumb": "/demo/21819635-thumb.webp",
+          "medium": "/demo/21819635-medium.webp",
+          "original": "/demo/21819635-medium.webp"
         }
       },
       {
-        "id": "89db219c-89df-43b3-a635-1bbef43f7fc9",
+        "id": "07bb6194-4156-4dcf-b9fa-6b8de16e15df",
         "kind": "PHOTO",
         "mimeType": "image/jpeg",
         "width": 1067,
@@ -1596,13 +1651,13 @@ export const albumMedia: Record<string, Paginated<PublicMedia>> = {
         "caption": "Career, photograph 2",
         "altText": "Career: a demo photograph",
         "urls": {
-          "thumb": "/demo/89db219c-thumb.webp",
-          "medium": "/demo/89db219c-medium.webp",
-          "original": "/demo/89db219c-medium.webp"
+          "thumb": "/demo/07bb6194-thumb.webp",
+          "medium": "/demo/07bb6194-medium.webp",
+          "original": "/demo/07bb6194-medium.webp"
         }
       },
       {
-        "id": "c288fb8e-7186-48ef-95d0-888787beec8b",
+        "id": "5204f525-0be8-4ed9-832a-f41b24012156",
         "kind": "PHOTO",
         "mimeType": "image/jpeg",
         "width": 1600,
@@ -1610,13 +1665,13 @@ export const albumMedia: Record<string, Paginated<PublicMedia>> = {
         "caption": "Career, photograph 3",
         "altText": "Career: a demo photograph",
         "urls": {
-          "thumb": "/demo/c288fb8e-thumb.webp",
-          "medium": "/demo/c288fb8e-medium.webp",
-          "original": "/demo/c288fb8e-medium.webp"
+          "thumb": "/demo/5204f525-thumb.webp",
+          "medium": "/demo/5204f525-medium.webp",
+          "original": "/demo/5204f525-medium.webp"
         }
       },
       {
-        "id": "93c63f57-a4f2-48ab-9f7c-5a14a86144da",
+        "id": "27b0331d-056a-47ed-b3c1-854f143e7f50",
         "kind": "PHOTO",
         "mimeType": "image/jpeg",
         "width": 1600,
@@ -1624,13 +1679,13 @@ export const albumMedia: Record<string, Paginated<PublicMedia>> = {
         "caption": "Career, photograph 4",
         "altText": "Career: a demo photograph",
         "urls": {
-          "thumb": "/demo/93c63f57-thumb.webp",
-          "medium": "/demo/93c63f57-medium.webp",
-          "original": "/demo/93c63f57-medium.webp"
+          "thumb": "/demo/27b0331d-thumb.webp",
+          "medium": "/demo/27b0331d-medium.webp",
+          "original": "/demo/27b0331d-medium.webp"
         }
       },
       {
-        "id": "782a5804-775b-4345-9325-46f6a56e716b",
+        "id": "728b5cc4-dc08-498d-917a-9306cdf6cbfe",
         "kind": "PHOTO",
         "mimeType": "image/jpeg",
         "width": 1067,
@@ -1638,9 +1693,9 @@ export const albumMedia: Record<string, Paginated<PublicMedia>> = {
         "caption": "Career, photograph 5",
         "altText": "Career: a demo photograph",
         "urls": {
-          "thumb": "/demo/782a5804-thumb.webp",
-          "medium": "/demo/782a5804-medium.webp",
-          "original": "/demo/782a5804-medium.webp"
+          "thumb": "/demo/728b5cc4-thumb.webp",
+          "medium": "/demo/728b5cc4-medium.webp",
+          "original": "/demo/728b5cc4-medium.webp"
         }
       }
     ],
@@ -1652,7 +1707,7 @@ export const albumMedia: Record<string, Paginated<PublicMedia>> = {
   "friends": {
     "items": [
       {
-        "id": "2041fa01-01f3-4719-8a0e-f8c79bf38e3e",
+        "id": "f61ca574-e097-4d8f-94fe-c6b44b6372a4",
         "kind": "PHOTO",
         "mimeType": "image/jpeg",
         "width": 1600,
@@ -1660,13 +1715,13 @@ export const albumMedia: Record<string, Paginated<PublicMedia>> = {
         "caption": "Friends, photograph 1",
         "altText": "Friends: a demo photograph",
         "urls": {
-          "thumb": "/demo/2041fa01-thumb.webp",
-          "medium": "/demo/2041fa01-medium.webp",
-          "original": "/demo/2041fa01-medium.webp"
+          "thumb": "/demo/f61ca574-thumb.webp",
+          "medium": "/demo/f61ca574-medium.webp",
+          "original": "/demo/f61ca574-medium.webp"
         }
       },
       {
-        "id": "eb3d5985-403f-41f6-a5a2-9943727b22b1",
+        "id": "0542b6ca-948d-4b64-9cff-8fb73c8ca1c3",
         "kind": "PHOTO",
         "mimeType": "image/jpeg",
         "width": 1067,
@@ -1674,13 +1729,13 @@ export const albumMedia: Record<string, Paginated<PublicMedia>> = {
         "caption": "Friends, photograph 2",
         "altText": "Friends: a demo photograph",
         "urls": {
-          "thumb": "/demo/eb3d5985-thumb.webp",
-          "medium": "/demo/eb3d5985-medium.webp",
-          "original": "/demo/eb3d5985-medium.webp"
+          "thumb": "/demo/0542b6ca-thumb.webp",
+          "medium": "/demo/0542b6ca-medium.webp",
+          "original": "/demo/0542b6ca-medium.webp"
         }
       },
       {
-        "id": "6f5afb9c-d268-49b5-bd8e-0ca1299e7a22",
+        "id": "78c6fe7c-234d-4757-a6ba-d24e70bb8a86",
         "kind": "PHOTO",
         "mimeType": "image/jpeg",
         "width": 1600,
@@ -1688,13 +1743,13 @@ export const albumMedia: Record<string, Paginated<PublicMedia>> = {
         "caption": "Friends, photograph 3",
         "altText": "Friends: a demo photograph",
         "urls": {
-          "thumb": "/demo/6f5afb9c-thumb.webp",
-          "medium": "/demo/6f5afb9c-medium.webp",
-          "original": "/demo/6f5afb9c-medium.webp"
+          "thumb": "/demo/78c6fe7c-thumb.webp",
+          "medium": "/demo/78c6fe7c-medium.webp",
+          "original": "/demo/78c6fe7c-medium.webp"
         }
       },
       {
-        "id": "91e5558c-ac3d-4c45-ae97-624143bf64b7",
+        "id": "2c7c0400-1c7f-4cd3-b404-55ef77bc027d",
         "kind": "PHOTO",
         "mimeType": "image/jpeg",
         "width": 1600,
@@ -1702,13 +1757,13 @@ export const albumMedia: Record<string, Paginated<PublicMedia>> = {
         "caption": "Friends, photograph 4",
         "altText": "Friends: a demo photograph",
         "urls": {
-          "thumb": "/demo/91e5558c-thumb.webp",
-          "medium": "/demo/91e5558c-medium.webp",
-          "original": "/demo/91e5558c-medium.webp"
+          "thumb": "/demo/2c7c0400-thumb.webp",
+          "medium": "/demo/2c7c0400-medium.webp",
+          "original": "/demo/2c7c0400-medium.webp"
         }
       },
       {
-        "id": "87c4d114-1b35-4628-a21f-275a2d34259f",
+        "id": "ffc60c5e-51ca-40fd-a828-d54d128b21c4",
         "kind": "PHOTO",
         "mimeType": "image/jpeg",
         "width": 1067,
@@ -1716,9 +1771,9 @@ export const albumMedia: Record<string, Paginated<PublicMedia>> = {
         "caption": "Friends, photograph 5",
         "altText": "Friends: a demo photograph",
         "urls": {
-          "thumb": "/demo/87c4d114-thumb.webp",
-          "medium": "/demo/87c4d114-medium.webp",
-          "original": "/demo/87c4d114-medium.webp"
+          "thumb": "/demo/ffc60c5e-thumb.webp",
+          "medium": "/demo/ffc60c5e-medium.webp",
+          "original": "/demo/ffc60c5e-medium.webp"
         }
       }
     ],
@@ -1730,7 +1785,7 @@ export const albumMedia: Record<string, Paginated<PublicMedia>> = {
   "special-memories": {
     "items": [
       {
-        "id": "104c5d11-fe03-475b-9294-a0ca512611db",
+        "id": "6c6854b4-9957-4b97-b1dd-855acbc5bac0",
         "kind": "PHOTO",
         "mimeType": "image/jpeg",
         "width": 1600,
@@ -1738,13 +1793,13 @@ export const albumMedia: Record<string, Paginated<PublicMedia>> = {
         "caption": "Special Memories, photograph 1",
         "altText": "Special Memories: a demo photograph",
         "urls": {
-          "thumb": "/demo/104c5d11-thumb.webp",
-          "medium": "/demo/104c5d11-medium.webp",
-          "original": "/demo/104c5d11-medium.webp"
+          "thumb": "/demo/6c6854b4-thumb.webp",
+          "medium": "/demo/6c6854b4-medium.webp",
+          "original": "/demo/6c6854b4-medium.webp"
         }
       },
       {
-        "id": "071f1802-9cb6-4e37-bea5-2fb29a0489b2",
+        "id": "59556575-3412-4f4f-829b-bae83da2c0ed",
         "kind": "PHOTO",
         "mimeType": "image/jpeg",
         "width": 1067,
@@ -1752,13 +1807,13 @@ export const albumMedia: Record<string, Paginated<PublicMedia>> = {
         "caption": "Special Memories, photograph 2",
         "altText": "Special Memories: a demo photograph",
         "urls": {
-          "thumb": "/demo/071f1802-thumb.webp",
-          "medium": "/demo/071f1802-medium.webp",
-          "original": "/demo/071f1802-medium.webp"
+          "thumb": "/demo/59556575-thumb.webp",
+          "medium": "/demo/59556575-medium.webp",
+          "original": "/demo/59556575-medium.webp"
         }
       },
       {
-        "id": "14bcad8d-4873-469b-9b49-5a59a4e78b9b",
+        "id": "81b0270f-888b-4a7a-b1fa-08ba60484232",
         "kind": "PHOTO",
         "mimeType": "image/jpeg",
         "width": 1600,
@@ -1766,13 +1821,13 @@ export const albumMedia: Record<string, Paginated<PublicMedia>> = {
         "caption": "Special Memories, photograph 3",
         "altText": "Special Memories: a demo photograph",
         "urls": {
-          "thumb": "/demo/14bcad8d-thumb.webp",
-          "medium": "/demo/14bcad8d-medium.webp",
-          "original": "/demo/14bcad8d-medium.webp"
+          "thumb": "/demo/81b0270f-thumb.webp",
+          "medium": "/demo/81b0270f-medium.webp",
+          "original": "/demo/81b0270f-medium.webp"
         }
       },
       {
-        "id": "53ac357a-d6a2-4781-a42d-ee68a11e78fe",
+        "id": "b31fa5c1-e7f1-43f5-af9a-87602eec0fe1",
         "kind": "PHOTO",
         "mimeType": "image/jpeg",
         "width": 1600,
@@ -1780,13 +1835,13 @@ export const albumMedia: Record<string, Paginated<PublicMedia>> = {
         "caption": "Special Memories, photograph 4",
         "altText": "Special Memories: a demo photograph",
         "urls": {
-          "thumb": "/demo/53ac357a-thumb.webp",
-          "medium": "/demo/53ac357a-medium.webp",
-          "original": "/demo/53ac357a-medium.webp"
+          "thumb": "/demo/b31fa5c1-thumb.webp",
+          "medium": "/demo/b31fa5c1-medium.webp",
+          "original": "/demo/b31fa5c1-medium.webp"
         }
       },
       {
-        "id": "6ee82d75-c2b0-49f4-a9fe-50ff965e79ed",
+        "id": "1b114412-36e2-4b0a-9572-149244878a9a",
         "kind": "PHOTO",
         "mimeType": "image/jpeg",
         "width": 1067,
@@ -1794,9 +1849,9 @@ export const albumMedia: Record<string, Paginated<PublicMedia>> = {
         "caption": "Special Memories, photograph 5",
         "altText": "Special Memories: a demo photograph",
         "urls": {
-          "thumb": "/demo/6ee82d75-thumb.webp",
-          "medium": "/demo/6ee82d75-medium.webp",
-          "original": "/demo/6ee82d75-medium.webp"
+          "thumb": "/demo/1b114412-thumb.webp",
+          "medium": "/demo/1b114412-medium.webp",
+          "original": "/demo/1b114412-medium.webp"
         }
       }
     ],
@@ -1808,7 +1863,7 @@ export const albumMedia: Record<string, Paginated<PublicMedia>> = {
   "recent-photos": {
     "items": [
       {
-        "id": "02d71f63-57df-4246-ae31-47ddd073f261",
+        "id": "0da29d16-21e8-4d50-8762-a4cbf30aa96f",
         "kind": "PHOTO",
         "mimeType": "image/jpeg",
         "width": 1600,
@@ -1816,13 +1871,13 @@ export const albumMedia: Record<string, Paginated<PublicMedia>> = {
         "caption": "Recent Photos, photograph 1",
         "altText": "Recent Photos: a demo photograph",
         "urls": {
-          "thumb": "/demo/02d71f63-thumb.webp",
-          "medium": "/demo/02d71f63-medium.webp",
-          "original": "/demo/02d71f63-medium.webp"
+          "thumb": "/demo/0da29d16-thumb.webp",
+          "medium": "/demo/0da29d16-medium.webp",
+          "original": "/demo/0da29d16-medium.webp"
         }
       },
       {
-        "id": "07c16cf1-73d2-4e38-b62e-4ae97cf65afe",
+        "id": "64b564dd-2795-47c8-9291-74db09aeda49",
         "kind": "PHOTO",
         "mimeType": "image/jpeg",
         "width": 1067,
@@ -1830,13 +1885,13 @@ export const albumMedia: Record<string, Paginated<PublicMedia>> = {
         "caption": "Recent Photos, photograph 2",
         "altText": "Recent Photos: a demo photograph",
         "urls": {
-          "thumb": "/demo/07c16cf1-thumb.webp",
-          "medium": "/demo/07c16cf1-medium.webp",
-          "original": "/demo/07c16cf1-medium.webp"
+          "thumb": "/demo/64b564dd-thumb.webp",
+          "medium": "/demo/64b564dd-medium.webp",
+          "original": "/demo/64b564dd-medium.webp"
         }
       },
       {
-        "id": "49d92f67-8c01-4440-b93c-2f666e354898",
+        "id": "6652ef46-cbe7-456b-836c-7d18ee4ad16e",
         "kind": "PHOTO",
         "mimeType": "image/jpeg",
         "width": 1600,
@@ -1844,13 +1899,13 @@ export const albumMedia: Record<string, Paginated<PublicMedia>> = {
         "caption": "Recent Photos, photograph 3",
         "altText": "Recent Photos: a demo photograph",
         "urls": {
-          "thumb": "/demo/49d92f67-thumb.webp",
-          "medium": "/demo/49d92f67-medium.webp",
-          "original": "/demo/49d92f67-medium.webp"
+          "thumb": "/demo/6652ef46-thumb.webp",
+          "medium": "/demo/6652ef46-medium.webp",
+          "original": "/demo/6652ef46-medium.webp"
         }
       },
       {
-        "id": "4065278a-c8fc-4a4f-be1c-16bb82700a01",
+        "id": "1a12e960-eaf7-44e8-b32e-d028ef1d0649",
         "kind": "PHOTO",
         "mimeType": "image/jpeg",
         "width": 1600,
@@ -1858,13 +1913,13 @@ export const albumMedia: Record<string, Paginated<PublicMedia>> = {
         "caption": "Recent Photos, photograph 4",
         "altText": "Recent Photos: a demo photograph",
         "urls": {
-          "thumb": "/demo/4065278a-thumb.webp",
-          "medium": "/demo/4065278a-medium.webp",
-          "original": "/demo/4065278a-medium.webp"
+          "thumb": "/demo/1a12e960-thumb.webp",
+          "medium": "/demo/1a12e960-medium.webp",
+          "original": "/demo/1a12e960-medium.webp"
         }
       },
       {
-        "id": "32011e55-ec7d-4152-adfb-5735c3cad879",
+        "id": "c8c2cd33-e760-4703-a627-16f8d293ef30",
         "kind": "PHOTO",
         "mimeType": "image/jpeg",
         "width": 1067,
@@ -1872,13 +1927,13 @@ export const albumMedia: Record<string, Paginated<PublicMedia>> = {
         "caption": "Recent Photos, photograph 5",
         "altText": "Recent Photos: a demo photograph",
         "urls": {
-          "thumb": "/demo/32011e55-thumb.webp",
-          "medium": "/demo/32011e55-medium.webp",
-          "original": "/demo/32011e55-medium.webp"
+          "thumb": "/demo/c8c2cd33-thumb.webp",
+          "medium": "/demo/c8c2cd33-medium.webp",
+          "original": "/demo/c8c2cd33-medium.webp"
         }
       },
       {
-        "id": "4395be17-f89d-4bf6-8480-32875216665f",
+        "id": "4fefb6fa-b2ae-4b2b-87c8-eb007cb383ff",
         "kind": "PHOTO",
         "mimeType": "image/jpeg",
         "width": 1600,
@@ -1886,9 +1941,9 @@ export const albumMedia: Record<string, Paginated<PublicMedia>> = {
         "caption": "Recent Photos, photograph 6",
         "altText": "Recent Photos: a demo photograph",
         "urls": {
-          "thumb": "/demo/4395be17-thumb.webp",
-          "medium": "/demo/4395be17-medium.webp",
-          "original": "/demo/4395be17-medium.webp"
+          "thumb": "/demo/4fefb6fa-thumb.webp",
+          "medium": "/demo/4fefb6fa-medium.webp",
+          "original": "/demo/4fefb6fa-medium.webp"
         }
       }
     ],
@@ -1899,76 +1954,199 @@ export const albumMedia: Record<string, Paginated<PublicMedia>> = {
   }
 };
 
-export const programme: ProgrammeItem[] = [
+/** Programme items grouped by public event. */
+export const programme: ProgrammeGroup[] = [
   {
-    "id": "c9e3023f-704b-4962-941e-9e75b1882b2c",
-    "startTime": "17:00",
-    "endTime": "17:45",
-    "title": "Guest Arrival",
-    "description": "Welcome drinks and canapés on the terrace.",
-    "speaker": null,
-    "location": "Garden Terrace",
-    "sortOrder": 0
+    "event": {
+      "id": "6e71d330-d4fa-4463-a53f-e30f97b9fe35",
+      "slug": "thanksgiving-service",
+      "name": "Thanksgiving Service",
+      "description": "A service of thanksgiving for seventy years, with the church choir Margaret has sung with for four decades.",
+      "startsAt": "2026-11-21T09:00:00.000Z",
+      "endsAt": "2026-11-21T11:00:00.000Z",
+      "venueName": "St. Andrew's Church",
+      "address": "3 Cathedral Road, Victoria Island",
+      "city": "Lagos",
+      "mapUrl": null,
+      "latitude": 6.4302,
+      "longitude": 3.4158,
+      "dressCode": "Church attire",
+      "theme": null,
+      "parkingInfo": "Parking in the church grounds. Ushers will guide you.",
+      "rsvpEnabled": true,
+      "invitedCategories": [],
+      "sortOrder": 0
+    },
+    "items": [
+      {
+        "id": "75c0a35d-880b-4151-8d1c-93fdd4baf921",
+        "eventId": "6e71d330-d4fa-4463-a53f-e30f97b9fe35",
+        "date": null,
+        "startTime": "10:00",
+        "endTime": "10:15",
+        "title": "Processional Hymn & Welcome",
+        "description": null,
+        "speaker": null,
+        "location": "Main church",
+        "sortOrder": 0
+      },
+      {
+        "id": "690e4dfb-7df7-433c-935d-97bf7cb4a348",
+        "eventId": "6e71d330-d4fa-4463-a53f-e30f97b9fe35",
+        "date": null,
+        "startTime": "10:15",
+        "endTime": "10:40",
+        "title": "Readings",
+        "description": "Read by two of the grandchildren.",
+        "speaker": null,
+        "location": "Main church",
+        "sortOrder": 1
+      },
+      {
+        "id": "d3f4acc4-20b2-4f70-b96f-0cb7e5d603a8",
+        "eventId": "6e71d330-d4fa-4463-a53f-e30f97b9fe35",
+        "date": null,
+        "startTime": "10:40",
+        "endTime": "11:10",
+        "title": "Sermon",
+        "description": null,
+        "speaker": "Rev. Canon Peter Obi",
+        "location": "Main church",
+        "sortOrder": 2
+      },
+      {
+        "id": "7f1a27ea-a5e7-4318-8084-e568ad55f406",
+        "eventId": "6e71d330-d4fa-4463-a53f-e30f97b9fe35",
+        "date": null,
+        "startTime": "11:10",
+        "endTime": "11:40",
+        "title": "Thanksgiving & Choir Anthem",
+        "description": "The choir sings Margaret's favourite anthem.",
+        "speaker": "St. Andrew's Choir",
+        "location": "Main church",
+        "sortOrder": 3
+      },
+      {
+        "id": "60e6a2cc-e743-45ba-b116-77f508f15dd9",
+        "eventId": "6e71d330-d4fa-4463-a53f-e30f97b9fe35",
+        "date": null,
+        "startTime": "11:40",
+        "endTime": "12:00",
+        "title": "Benediction & Photographs",
+        "description": null,
+        "speaker": null,
+        "location": "Church steps",
+        "sortOrder": 4
+      }
+    ]
   },
   {
-    "id": "b537437f-2dc7-4945-8c4f-879c8e3d08d0",
-    "startTime": "17:45",
-    "endTime": "18:00",
-    "title": "Welcome",
-    "description": "Opening words from the family.",
-    "speaker": "Ngozi Okonkwo-Bello",
-    "location": "Emerald Ballroom",
-    "sortOrder": 1
-  },
-  {
-    "id": "476ebdf5-e98a-48f4-833b-6e69a70660af",
-    "startTime": "18:00",
-    "endTime": "18:15",
-    "title": "Thanksgiving Prayer",
-    "description": null,
-    "speaker": "Rev. Canon Peter Obi",
-    "location": "Emerald Ballroom",
-    "sortOrder": 2
-  },
-  {
-    "id": "b2f99add-a1ec-4afe-b0d4-0dfd9d01b928",
-    "startTime": "18:15",
-    "endTime": "19:30",
-    "title": "Dinner",
-    "description": "A three-course dinner with dishes from Margaret's favourite recipes.",
-    "speaker": null,
-    "location": "Emerald Ballroom",
-    "sortOrder": 3
-  },
-  {
-    "id": "011cf8c3-3075-40cb-993a-9dd47da84f6f",
-    "startTime": "19:30",
-    "endTime": "20:15",
-    "title": "Tributes",
-    "description": "Words from family, friends and colleagues, and a short film.",
-    "speaker": null,
-    "location": "Emerald Ballroom",
-    "sortOrder": 4
-  },
-  {
-    "id": "1c019009-8cd5-4119-81cc-fcd534b2dee6",
-    "startTime": "20:15",
-    "endTime": "20:30",
-    "title": "Birthday Toast & Cake",
-    "description": null,
-    "speaker": "Engr. Emeka Okonkwo",
-    "location": "Emerald Ballroom",
-    "sortOrder": 5
-  },
-  {
-    "id": "a8c5c004-70cb-4e68-849f-d2bf23d4b0f3",
-    "startTime": "20:30",
-    "endTime": "23:00",
-    "title": "Music & Dancing",
-    "description": "Highlife classics and a few surprises.",
-    "speaker": "The Palm Grove Band",
-    "location": "Emerald Ballroom",
-    "sortOrder": 6
+    "event": {
+      "id": "7ef5ff4b-0b0b-46eb-ad92-527d153d6ffb",
+      "slug": "birthday-dinner",
+      "name": "Birthday Dinner",
+      "description": "Dinner, tributes, music and dancing in the Emerald Ballroom.",
+      "startsAt": "2026-11-21T16:00:00.000Z",
+      "endsAt": "2026-11-21T22:00:00.000Z",
+      "venueName": "The Emerald Ballroom",
+      "address": "12 Palm Grove Avenue, Victoria Island",
+      "city": "Lagos",
+      "mapUrl": "https://www.openstreetmap.org/?mlat=6.4281&mlon=3.4219#map=16/6.4281/3.4219",
+      "latitude": 6.4281,
+      "longitude": 3.4219,
+      "dressCode": "Black tie: emerald, gold or ivory accents welcome",
+      "theme": "Emerald & Gold",
+      "parkingInfo": "Valet parking at the main entrance from 4:30 PM. Overflow parking is signposted on Palm Grove Close.",
+      "rsvpEnabled": true,
+      "invitedCategories": [],
+      "sortOrder": 1
+    },
+    "items": [
+      {
+        "id": "8d47a712-f371-477d-b21e-1ceebc8b0a56",
+        "eventId": "7ef5ff4b-0b0b-46eb-ad92-527d153d6ffb",
+        "date": null,
+        "startTime": "17:00",
+        "endTime": "17:45",
+        "title": "Guest Arrival",
+        "description": "Welcome drinks and canapés on the terrace.",
+        "speaker": null,
+        "location": "Garden Terrace",
+        "sortOrder": 0
+      },
+      {
+        "id": "3216ee6a-cd82-4e82-9dd5-e4fc59cfd2d7",
+        "eventId": "7ef5ff4b-0b0b-46eb-ad92-527d153d6ffb",
+        "date": null,
+        "startTime": "17:45",
+        "endTime": "18:00",
+        "title": "Welcome",
+        "description": "Opening words from the family.",
+        "speaker": "Ngozi Okonkwo-Bello",
+        "location": "Emerald Ballroom",
+        "sortOrder": 1
+      },
+      {
+        "id": "8899641b-95a2-4a28-846a-d0cb1f215b0c",
+        "eventId": "7ef5ff4b-0b0b-46eb-ad92-527d153d6ffb",
+        "date": null,
+        "startTime": "18:00",
+        "endTime": "18:15",
+        "title": "Thanksgiving Prayer",
+        "description": null,
+        "speaker": "Rev. Canon Peter Obi",
+        "location": "Emerald Ballroom",
+        "sortOrder": 2
+      },
+      {
+        "id": "d544c433-b3d9-4a76-805e-0f9c282406c6",
+        "eventId": "7ef5ff4b-0b0b-46eb-ad92-527d153d6ffb",
+        "date": null,
+        "startTime": "18:15",
+        "endTime": "19:30",
+        "title": "Dinner",
+        "description": "A three-course dinner with dishes from Margaret's favourite recipes.",
+        "speaker": null,
+        "location": "Emerald Ballroom",
+        "sortOrder": 3
+      },
+      {
+        "id": "4547de80-b817-4485-be79-9eae35442b7d",
+        "eventId": "7ef5ff4b-0b0b-46eb-ad92-527d153d6ffb",
+        "date": null,
+        "startTime": "19:30",
+        "endTime": "20:15",
+        "title": "Tributes",
+        "description": "Words from family, friends and colleagues, and a short film.",
+        "speaker": null,
+        "location": "Emerald Ballroom",
+        "sortOrder": 4
+      },
+      {
+        "id": "be9118c2-d22c-4580-a109-b5d86dd42505",
+        "eventId": "7ef5ff4b-0b0b-46eb-ad92-527d153d6ffb",
+        "date": null,
+        "startTime": "20:15",
+        "endTime": "20:30",
+        "title": "Birthday Toast & Cake",
+        "description": null,
+        "speaker": "Engr. Emeka Okonkwo",
+        "location": "Emerald Ballroom",
+        "sortOrder": 5
+      },
+      {
+        "id": "ed58f17e-fd5a-4d8f-99e0-3394ef05f4eb",
+        "eventId": "7ef5ff4b-0b0b-46eb-ad92-527d153d6ffb",
+        "date": null,
+        "startTime": "20:30",
+        "endTime": "23:00",
+        "title": "Music & Dancing",
+        "description": "Highlife classics and a few surprises.",
+        "speaker": "The Palm Grove Band",
+        "location": "Emerald Ballroom",
+        "sortOrder": 6
+      }
+    ]
   }
 ];
 
@@ -1977,13 +2155,13 @@ export const testimonials: Record<number, Paginated<PublicTestimonial>> = {
   "8": {
     "items": [
       {
-        "id": "fba4c66a-09f3-4e66-b451-f33c3b03dd44",
+        "id": "fb937a3b-4904-4c2f-b3f3-3c3c53154012",
         "authorName": "Ngozi Okonkwo-Bello",
         "relationship": "Daughter",
         "message": "Mummy, you taught us that a full table is a full heart. Every Sunday, every exam, every heartbreak, you were there with food, prayer and the right words. Happy seventieth to the woman who made us who we are.",
         "isFeatured": true,
         "photo": {
-          "id": "a56d61f5-d48c-47f1-9314-6d43cf797ed3",
+          "id": "35f9ed60-6d91-476f-be92-fb5b5d6307fa",
           "kind": "PHOTO",
           "mimeType": "image/jpeg",
           "width": 800,
@@ -1991,32 +2169,32 @@ export const testimonials: Record<number, Paginated<PublicTestimonial>> = {
           "caption": null,
           "altText": null,
           "urls": {
-            "thumb": "/demo/a56d61f5-thumb.webp",
-            "medium": "/demo/a56d61f5-medium.webp",
-            "original": "/demo/a56d61f5-medium.webp"
+            "thumb": "/demo/35f9ed60-thumb.webp",
+            "medium": "/demo/35f9ed60-medium.webp",
+            "original": "/demo/35f9ed60-medium.webp"
           }
         },
         "video": null,
-        "createdAt": "2026-09-23T08:03:22.250Z"
+        "createdAt": "2026-10-10T04:31:28.510Z"
       },
       {
-        "id": "af9f976c-7223-42d2-8687-efc922842423",
+        "id": "0a930b5a-d47d-48e7-a295-6e291cc1fa4c",
         "authorName": "Dr. Samuel Ogunleye",
         "relationship": "Former colleague",
         "message": "I arrived at the hospital as a nervous house officer. Dr. Okonkwo gave me her pager, her patience and, on one memorable night, her dinner. Half the paediatricians in Lagos owe her their careers. Happy birthday, Madam.",
         "isFeatured": false,
         "photo": null,
         "video": null,
-        "createdAt": "2026-09-23T15:03:22.251Z"
+        "createdAt": "2026-10-10T11:31:28.511Z"
       },
       {
-        "id": "8fc55483-f434-427c-902c-69d6ca282642",
+        "id": "ab0e922e-7086-4207-8103-3817ac1c7338",
         "authorName": "Chioma Eze-Adeyemi",
         "relationship": "Sister",
         "message": "Sixty-six years of being your little sister: borrowing your books, your shoes and your good sense. Seventy looks wonderful on you, Ada.",
         "isFeatured": false,
         "photo": {
-          "id": "62dc6f05-083e-40c1-b099-205b0e8e3e01",
+          "id": "a2c3f1b5-5721-4fe9-8901-3f6a5b6ed732",
           "kind": "PHOTO",
           "mimeType": "image/jpeg",
           "width": 800,
@@ -2024,33 +2202,33 @@ export const testimonials: Record<number, Paginated<PublicTestimonial>> = {
           "caption": null,
           "altText": null,
           "urls": {
-            "thumb": "/demo/62dc6f05-thumb.webp",
-            "medium": "/demo/62dc6f05-medium.webp",
-            "original": "/demo/62dc6f05-medium.webp"
+            "thumb": "/demo/a2c3f1b5-thumb.webp",
+            "medium": "/demo/a2c3f1b5-medium.webp",
+            "original": "/demo/a2c3f1b5-medium.webp"
           }
         },
         "video": null,
-        "createdAt": "2026-09-23T22:03:22.317Z"
+        "createdAt": "2026-10-10T18:31:28.578Z"
       },
       {
-        "id": "20a0391d-fcb9-4c21-bf5f-de206623de9e",
+        "id": "3fd9959d-6513-4563-b8ca-37c197dd5ce8",
         "authorName": "Grace Okafor",
         "relationship": "Choir member",
         "message": "Our alto section would be lost without you, in every sense. Thank you for the harmonies, the chin-chin and the prayers. Happy birthday!",
         "isFeatured": false,
         "photo": null,
         "video": null,
-        "createdAt": "2026-09-24T05:03:22.318Z"
+        "createdAt": "2026-10-11T01:31:28.579Z"
       },
       {
-        "id": "4264480b-8e90-4bc1-95c6-b10ea2070670",
+        "id": "e4356863-ea22-4bcc-aab3-390a6f8a5218",
         "authorName": "Kemi Bello",
         "relationship": "Granddaughter",
         "message": "Happy birthday Grandma! You are the best at stories and puff-puff. I love you seventy times a hundred.",
         "isFeatured": false,
         "photo": null,
         "video": null,
-        "createdAt": "2026-09-24T12:03:22.318Z"
+        "createdAt": "2026-10-11T08:31:28.580Z"
       }
     ],
     "total": 5,
@@ -2061,13 +2239,13 @@ export const testimonials: Record<number, Paginated<PublicTestimonial>> = {
   "12": {
     "items": [
       {
-        "id": "fba4c66a-09f3-4e66-b451-f33c3b03dd44",
+        "id": "fb937a3b-4904-4c2f-b3f3-3c3c53154012",
         "authorName": "Ngozi Okonkwo-Bello",
         "relationship": "Daughter",
         "message": "Mummy, you taught us that a full table is a full heart. Every Sunday, every exam, every heartbreak, you were there with food, prayer and the right words. Happy seventieth to the woman who made us who we are.",
         "isFeatured": true,
         "photo": {
-          "id": "a56d61f5-d48c-47f1-9314-6d43cf797ed3",
+          "id": "35f9ed60-6d91-476f-be92-fb5b5d6307fa",
           "kind": "PHOTO",
           "mimeType": "image/jpeg",
           "width": 800,
@@ -2075,32 +2253,32 @@ export const testimonials: Record<number, Paginated<PublicTestimonial>> = {
           "caption": null,
           "altText": null,
           "urls": {
-            "thumb": "/demo/a56d61f5-thumb.webp",
-            "medium": "/demo/a56d61f5-medium.webp",
-            "original": "/demo/a56d61f5-medium.webp"
+            "thumb": "/demo/35f9ed60-thumb.webp",
+            "medium": "/demo/35f9ed60-medium.webp",
+            "original": "/demo/35f9ed60-medium.webp"
           }
         },
         "video": null,
-        "createdAt": "2026-09-23T08:03:22.250Z"
+        "createdAt": "2026-10-10T04:31:28.510Z"
       },
       {
-        "id": "af9f976c-7223-42d2-8687-efc922842423",
+        "id": "0a930b5a-d47d-48e7-a295-6e291cc1fa4c",
         "authorName": "Dr. Samuel Ogunleye",
         "relationship": "Former colleague",
         "message": "I arrived at the hospital as a nervous house officer. Dr. Okonkwo gave me her pager, her patience and, on one memorable night, her dinner. Half the paediatricians in Lagos owe her their careers. Happy birthday, Madam.",
         "isFeatured": false,
         "photo": null,
         "video": null,
-        "createdAt": "2026-09-23T15:03:22.251Z"
+        "createdAt": "2026-10-10T11:31:28.511Z"
       },
       {
-        "id": "8fc55483-f434-427c-902c-69d6ca282642",
+        "id": "ab0e922e-7086-4207-8103-3817ac1c7338",
         "authorName": "Chioma Eze-Adeyemi",
         "relationship": "Sister",
         "message": "Sixty-six years of being your little sister: borrowing your books, your shoes and your good sense. Seventy looks wonderful on you, Ada.",
         "isFeatured": false,
         "photo": {
-          "id": "62dc6f05-083e-40c1-b099-205b0e8e3e01",
+          "id": "a2c3f1b5-5721-4fe9-8901-3f6a5b6ed732",
           "kind": "PHOTO",
           "mimeType": "image/jpeg",
           "width": 800,
@@ -2108,33 +2286,33 @@ export const testimonials: Record<number, Paginated<PublicTestimonial>> = {
           "caption": null,
           "altText": null,
           "urls": {
-            "thumb": "/demo/62dc6f05-thumb.webp",
-            "medium": "/demo/62dc6f05-medium.webp",
-            "original": "/demo/62dc6f05-medium.webp"
+            "thumb": "/demo/a2c3f1b5-thumb.webp",
+            "medium": "/demo/a2c3f1b5-medium.webp",
+            "original": "/demo/a2c3f1b5-medium.webp"
           }
         },
         "video": null,
-        "createdAt": "2026-09-23T22:03:22.317Z"
+        "createdAt": "2026-10-10T18:31:28.578Z"
       },
       {
-        "id": "20a0391d-fcb9-4c21-bf5f-de206623de9e",
+        "id": "3fd9959d-6513-4563-b8ca-37c197dd5ce8",
         "authorName": "Grace Okafor",
         "relationship": "Choir member",
         "message": "Our alto section would be lost without you, in every sense. Thank you for the harmonies, the chin-chin and the prayers. Happy birthday!",
         "isFeatured": false,
         "photo": null,
         "video": null,
-        "createdAt": "2026-09-24T05:03:22.318Z"
+        "createdAt": "2026-10-11T01:31:28.579Z"
       },
       {
-        "id": "4264480b-8e90-4bc1-95c6-b10ea2070670",
+        "id": "e4356863-ea22-4bcc-aab3-390a6f8a5218",
         "authorName": "Kemi Bello",
         "relationship": "Granddaughter",
         "message": "Happy birthday Grandma! You are the best at stories and puff-puff. I love you seventy times a hundred.",
         "isFeatured": false,
         "photo": null,
         "video": null,
-        "createdAt": "2026-09-24T12:03:22.318Z"
+        "createdAt": "2026-10-11T08:31:28.580Z"
       }
     ],
     "total": 5,
@@ -2149,6 +2327,7 @@ export const rsvpForm: RsvpFormConfig = {
     "open": true,
     "requireApproval": true
   },
+  "rsvpScope": "PER_EVENT",
   "availability": {
     "open": true,
     "mode": "OPEN",
@@ -2159,39 +2338,76 @@ export const rsvpForm: RsvpFormConfig = {
   "maxCompanions": 4,
   "categories": [
     {
-      "id": "916dc10c-4fe7-4bbf-a15c-8a6777d5d80f",
+      "id": "41befc17-4ad8-43f4-a2c1-9c5834140864",
       "name": "Family",
       "description": "Relatives near and far",
       "defaultCompanions": 3,
       "full": false
     },
     {
-      "id": "17f5b2e9-4a39-41c8-b570-70dea81bf0a2",
+      "id": "9f40e8b1-f59f-4ef9-9bd6-49b5e05c9a7b",
       "name": "Friends",
       "description": "Friends of the family",
       "defaultCompanions": 1,
       "full": false
     },
     {
-      "id": "dff00161-7c9c-4f06-b00a-3a288d9add57",
+      "id": "0167ddb5-3f6a-4364-ad00-a327e521d892",
       "name": "Colleagues",
       "description": "From medicine and the hospital years",
       "defaultCompanions": 1,
       "full": false
     },
     {
-      "id": "cfa35fa3-a544-4e6a-b8c6-ad9002cc2b7d",
+      "id": "d8adf999-8f48-491b-9ce4-5f33f485a4ee",
       "name": "Church & Community",
       "description": "Choir, church and community groups",
       "defaultCompanions": 1,
       "full": false
     }
   ],
+  "events": [
+    {
+      "id": "6e71d330-d4fa-4463-a53f-e30f97b9fe35",
+      "slug": "thanksgiving-service",
+      "name": "Thanksgiving Service",
+      "startsAt": "2026-11-21T09:00:00.000Z",
+      "endsAt": "2026-11-21T11:00:00.000Z",
+      "venueName": "St. Andrew's Church",
+      "city": "Lagos",
+      "invitedCategoryIds": [],
+      "full": false
+    },
+    {
+      "id": "7ef5ff4b-0b0b-46eb-ad92-527d153d6ffb",
+      "slug": "birthday-dinner",
+      "name": "Birthday Dinner",
+      "startsAt": "2026-11-21T16:00:00.000Z",
+      "endsAt": "2026-11-21T22:00:00.000Z",
+      "venueName": "The Emerald Ballroom",
+      "city": "Lagos",
+      "invitedCategoryIds": [],
+      "full": false
+    },
+    {
+      "id": "e1feaa12-83a5-4240-8682-792b369c539a",
+      "slug": "family-brunch",
+      "name": "Family Brunch",
+      "startsAt": "2026-11-22T11:00:00.000Z",
+      "endsAt": "2026-11-22T14:00:00.000Z",
+      "venueName": "The Okonkwo family home",
+      "city": "Lagos",
+      "invitedCategoryIds": [
+        "41befc17-4ad8-43f4-a2c1-9c5834140864"
+      ],
+      "full": false
+    }
+  ],
   "questions": [
     {
-      "id": "f80a1850-8990-4548-8b79-559f2a47e2fb",
-      "label": "Will you join the thanksgiving service at 10:00 AM on the day?",
-      "helpText": "St. Andrew's Church, a short drive from the venue.",
+      "id": "7057af9f-9209-43e6-9d6e-dd8c270de045",
+      "label": "Will you need a seat on the shuttle from the church to the ballroom?",
+      "helpText": "It leaves St. Andrew's Church at 4:15 PM on Saturday.",
       "type": "SELECT",
       "options": [
         "Yes",
@@ -2202,7 +2418,7 @@ export const rsvpForm: RsvpFormConfig = {
       "sortOrder": 0
     },
     {
-      "id": "575a874c-fc53-4344-9d3b-34d9a6aa0c45",
+      "id": "ecb8887c-9622-4746-b7bb-fc277ab4a215",
       "label": "A song that reminds you of Margaret",
       "helpText": "The band will play as many as they can.",
       "type": "TEXT",
@@ -2211,7 +2427,7 @@ export const rsvpForm: RsvpFormConfig = {
       "sortOrder": 1
     },
     {
-      "id": "d0f9e99a-122e-4ccc-a6bc-365d719de5a9",
+      "id": "2c9469a6-cfd1-45b5-b94a-cb9458f7f4a7",
       "label": "I would like to say a few words during the tributes",
       "helpText": null,
       "type": "CHECKBOX",

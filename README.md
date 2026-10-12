@@ -13,7 +13,7 @@ The family and event staff can:
 
 - edit every piece of content from the admin dashboard (nothing is hard-coded)
 - approve or reject guest photos and messages, and choose which messages appear publicly
-- manage guests, invitations and the event capacity
+- manage the events (for example a service, a dinner and a brunch), guests, invitations and capacity
 - check guests in at the door by scanning their QR codes on a phone
 - see storage use against a quota, and an audit log of sensitive actions
 
@@ -161,7 +161,7 @@ In production the API refuses to start if the secrets still have their example v
 **Seeding.** The seed is safe to run more than once. It never overwrites existing content.
 
 - `SEED_ADMIN_EMAIL` and `SEED_ADMIN_PASSWORD` create the first super admin. Use this in production.
-- `SEED_DEMO=true` adds the demo content: a fictional celebrant (Dr. Margaret Adaeze Okonkwo), an event, a programme, six albums with generated artwork, a timeline, a family tree, 18 guests, testimonials in every moderation state, guest photos waiting for review, and the three demo logins.
+- `SEED_DEMO=true` adds the demo content: a fictional celebrant (Dr. Margaret Adaeze Okonkwo), three events over two days (a thanksgiving service, a birthday dinner and a family-only brunch with its own capacity), a programme for the first two, six albums with generated artwork, a timeline, a family tree, 18 guests, testimonials in every moderation state, guest photos waiting for review, and the three demo logins.
 - The site shows a small "Demo content" label while demo data is loaded. The label comes from a flag in Settings.
 
 All demo images are generated abstract artwork: no real people, no text. Demo photos go through the same upload pipeline as real ones, so the previews, storage accounting and blob storage are exercised too.
@@ -223,7 +223,7 @@ It rewrites `apps/web/src/demo/fixtures.ts` and the photos in `apps/web/public/d
 | Command | What runs | Needs |
 |---|---|---|
 | `npm run test:unit -w apps/api` | API unit tests: file-type detection, moderation rules, RSVP answers, QR parsing, quota levels, passwords, config | nothing |
-| `npm run test:e2e -w apps/api` | API tests over HTTP against a real test database and Azurite: login, lockout, CSRF, refresh-token reuse, roles, RSVP limits, capacity under concurrent RSVPs, duplicate check-ins from two phones at once, uploads, damaged and disguised files, quota under concurrent uploads, testimonial visibility | `npm run infra:up` |
+| `npm run test:e2e -w apps/api` | API tests over HTTP against a real test database and Azurite: login, lockout, CSRF, refresh-token reuse, roles, RSVP limits, capacity under concurrent RSVPs, duplicate check-ins from two phones at once, several events (category limits, event capacity, check-in per event, the migration from one event), uploads, damaged and disguised files, quota under concurrent uploads, testimonial visibility | `npm run infra:up` |
 | `npm run test -w apps/web` | Web component and form tests (Vitest) | nothing |
 | `npm run test:e2e` | Playwright tests in a real browser: RSVP to digital invitation, birthday message, guest photo upload to moderation queue, admin login, staff check-in, mobile layout | infra up, database migrated and seeded with demo data |
 
@@ -309,7 +309,11 @@ The API enforces every rule. Hiding a menu item in the browser is only for conve
 
 Admins can send or re-send invitations at any time: one at a time from a guest's details, or in bulk from **Admin → Invitations** ("Send to selected" or "Send to everyone not yet sent"). Guests who declined and revoked invitations are skipped.
 
-**Capacity.** The event has one total capacity (Event page). You can also set aside places for each guest category, for example Family 90, Friends 60, Colleagues 40. When a category's places are taken, new RSVPs choosing that category are refused with a clear message, and the RSVP form marks the category as full. Places not set aside stay open to everyone else. The categories together can never hold more than the event capacity, and a category's places can never be set below the guests already confirmed in it.
+**Events.** A celebration has one or more events, each with its own date, venue, dress code and programme (**Admin → Event**). An event can be limited to some guest categories: family to every event, friends only to the dinner, for example. Guests then see and reply to only their events, ticking which ones they will come to and how many of their companions come to each. An admin can add a single guest to any other event from the guest's details. An event can have its own capacity, take no replies at all (information only), or be hidden from the public site. With one event, the site looks exactly as it did before events were added.
+
+Two choices on the Event page change how this works for the whole celebration. **How guests reply to the events**: event by event (the default), or once for everything, where a yes covers every event the guest is invited to. **Check-in at the door**: at each event (the default), or once for the celebration, where one check-in counts everywhere and staff do not choose an event. Changing either keeps the replies and check-ins already recorded.
+
+**Capacity.** The celebration has one total capacity (Event page). It counts each person once, whatever events they attend. You can also set aside places for each guest category, for example Family 90, Friends 60, Colleagues 40. When a category's places are taken, new RSVPs choosing that category are refused with a clear message, and the RSVP form marks the category as full. Places not set aside stay open to everyone else. The categories together can never hold more than the celebration capacity, and a category's places can never be set below the guests already confirmed in it.
 
 **Private albums.** An album can be public (shown in the gallery) or private (only admins can see it). Photos in a private album cannot be opened from the public site, even with a direct link.
 
@@ -330,13 +334,13 @@ The digital invitation is at `/invitation/<token>`. Guests can download it as a 
 
 **Check-in at the door** (`/admin/check-in`, works well on a phone):
 
-1. Staff sign in and scan the guest's QR code with the phone camera. If the camera does not work, they can type the invitation code or search by name.
-2. The API checks the invitation and replies with one of: **Valid**, **Already checked in** (with the time and the staff member), **Revoked**, **Expired**, **Not attending** or **Invalid**.
+1. Staff sign in and choose the event they are checking in for (the one happening now, or the next one, is chosen for them). Then they scan the guest's QR code with the phone camera. If the camera does not work, they can type the invitation code or search by name.
+2. The API checks the invitation and replies with one of: **Valid**, **Already checked in** (with the time and the staff member), **Revoked**, **Expired**, **Not attending**, **Not for this event** or **Invalid**.
 3. Staff press **Check in**. They can admit fewer people than the full party if some have not arrived yet.
 
-A guest can be checked in only once. The database enforces this with a unique index, so two staff scanning the same code at the same moment still produce one check-in. An admin can reverse a check-in, with a reason, which allows checking in again. Every check-in records the staff member, the time and the device.
+The same QR code works at every event. A guest can be checked in only once per event. The database enforces this with a unique index, so two staff scanning the same code at the same moment still produce one check-in. An admin can reverse a check-in, with a reason, which allows checking in again. Every check-in records the staff member, the time and the device.
 
-**2. The photo-upload QR code (one per event).** In **Admin → Settings → Guest upload QR** you can view, download (PNG or SVG), print (an A4 poster PDF) or regenerate the code. It links to `/memories/upload/<token>`. That page lets guests pick photos, add an optional name and message, and upload. The token only allows uploading; it gives no other access. Regenerating it makes printed posters stop working.
+**2. The photo-upload QR code (one for the whole celebration).** In **Admin → Settings → Guest upload QR** you can view, download (PNG or SVG), print (an A4 poster PDF) or regenerate the code. It links to `/memories/upload/<token>`. That page lets guests pick photos, add an optional name and message, and upload. The token only allows uploading; it gives no other access. Regenerating it makes printed posters stop working.
 
 QR codes are plain black on white with a wide margin, so they scan reliably in dim light.
 

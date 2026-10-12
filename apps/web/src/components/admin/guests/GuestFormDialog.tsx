@@ -7,9 +7,9 @@ import { useQueryClient } from '@tanstack/react-query';
 import type { AdminGuestDetail, CreateGuestRequest, UpdateGuestRequest } from '@birthday/types';
 import { api, isApiError } from '@/lib/api';
 import { adminKeys, affects, nullIfBlank, reportFormError, useAdminMutation } from '@/lib/admin-api';
-import { AButton, AField, AInput, ASelect, ATextarea, IconButton, SwitchRow, describedBy } from '../ui';
+import { AButton, ACheckbox, AField, AInput, ASelect, ATextarea, IconButton, SwitchRow, describedBy } from '../ui';
 import { AdminDialog } from '../overlays';
-import { CapacityOverride, useGuestCategories } from './shared';
+import { CapacityOverride, coveredByCategory, useEvents, useGuestCategories } from './shared';
 
 const companionSchema = z.object({
   fullName: z.string().trim().min(1, 'Enter the companion’s name').min(2, 'Use at least 2 characters').max(120, 'Keep it to 120 characters or fewer'),
@@ -76,6 +76,10 @@ export function GuestFormDialog({
   const editing = !!guest;
   const queryClient = useQueryClient();
   const categories = useGuestCategories();
+  const events = useEvents();
+  // Events left unticked when recording an RSVP; none means every event the guest may attend.
+  const [skipped, setSkipped] = useState<string[]>([]);
+  const [eventsError, setEventsError] = useState<string | null>(null);
   const [capacityMessage, setCapacityMessage] = useState<string | null>(null);
   const [override, setOverride] = useState(false);
 
@@ -85,10 +89,13 @@ export function GuestFormDialog({
   });
   const { errors } = formState;
   const companions = useFieldArray({ control, name: 'companions' });
-  const [recordRsvp, response, allowed, sendInvitation] = useWatch({
+  const [recordRsvp, response, allowed, sendInvitation, categoryId] = useWatch({
     control,
-    name: ['recordRsvp', 'response', 'allowedCompanions', 'sendInvitation'],
+    name: ['recordRsvp', 'response', 'allowedCompanions', 'sendInvitation', 'categoryId'],
   });
+  // Events this guest could reply to, by their category. Shown only when there is a choice to make.
+  const eligible = (events.data ?? []).filter((e) => e.rsvpEnabled && coveredByCategory(e, categoryId || null));
+  const chooseEvents = (events.data?.length ?? 0) > 1 && eligible.length > 0;
 
   // Reset only when the dialog opens (or switches guest), not when a background refetch
   // hands us a new object for the same guest, which would wipe unsaved edits.
@@ -97,6 +104,8 @@ export function GuestFormDialog({
     if (!open) return;
     setCapacityMessage(null);
     setOverride(false);
+    setSkipped([]);
+    setEventsError(null);
     reset(
       guest
         ? {
@@ -124,7 +133,7 @@ export function GuestFormDialog({
       onSaved?.(saved);
     },
     onError: (error) => {
-      if (isApiError(error, 'EVENT_CAPACITY_REACHED') || isApiError(error, 'CATEGORY_CAPACITY_REACHED')) {
+      if (isApiError(error, 'EVENT_CAPACITY_REACHED') || isApiError(error, 'CATEGORY_CAPACITY_REACHED') || isApiError(error, 'EVENT_FULL')) {
         setCapacityMessage(error.message);
         return;
       }
@@ -156,12 +165,23 @@ export function GuestFormDialog({
     }
     const body: CreateGuestRequest = { ...base, sendInvitation: v.sendInvitation };
     if (v.recordRsvp) {
+      const attending = v.response === 'ATTENDING';
+      const chosen = eligible.filter((e) => !skipped.includes(e.id));
+      if (attending && chooseEvents && chosen.length === 0) {
+        setEventsError('Tick at least one event, or record the reply as declined.');
+        return;
+      }
+      setEventsError(null);
       body.rsvp = {
         response: v.response,
         companions:
           v.response === 'ATTENDING'
             ? v.companions.map((c) => ({ fullName: c.fullName, ...(c.dietary ? { dietary: c.dietary } : {}) }))
             : [],
+        // Left out when every event is ticked: the API then uses every event the guest may attend.
+        ...(attending && chooseEvents && chosen.length < eligible.length
+          ? { events: chosen.map((e) => ({ eventId: e.id, companionCount: v.companions.length })) }
+          : {}),
         ...(v.dietary ? { dietary: v.dietary } : {}),
         ...(v.accessibility ? { accessibility: v.accessibility } : {}),
       };
@@ -270,6 +290,32 @@ export function GuestFormDialog({
                     </label>
                   ))}
                 </div>
+
+                {response === 'ATTENDING' && chooseEvents && (
+                  <fieldset aria-describedby="g-events-hint">
+                    <legend className="mb-1 text-[13px] font-medium text-navy">Events</legend>
+                    <ul className="grid gap-x-4 sm:grid-cols-2">
+                      {eligible.map((e) => {
+                        const id = `g-event-${e.id}`;
+                        return (
+                          <li key={e.id} className="flex min-h-10 items-center gap-2.5 md:min-h-8">
+                            <ACheckbox
+                              id={id}
+                              checked={!skipped.includes(e.id)}
+                              onCheckedChange={(on) => setSkipped((list) => (on ? list.filter((x) => x !== e.id) : [...list, e.id]))}
+                            />
+                            <label htmlFor={id} className="text-[13px] text-charcoal">
+                              {e.name}
+                            </label>
+                          </li>
+                        );
+                      })}
+                    </ul>
+                    <p id="g-events-hint" className={eventsError ? 'mt-1 text-xs text-error' : 'mt-1 text-xs text-muted'} role={eventsError ? 'alert' : undefined}>
+                      {eventsError ?? 'The events the guest will attend, with all their companions. Only events their category is invited to are listed.'}
+                    </p>
+                  </fieldset>
+                )}
 
                 {response === 'ATTENDING' && (
                   <div>

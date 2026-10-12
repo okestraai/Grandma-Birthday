@@ -49,8 +49,21 @@ export function CodeEntry({ onVerify, disabled }: { onVerify: (value: string) =>
   );
 }
 
-/** Search invitations by guest name (GET /checkin/search?q=). */
-export function NameSearch({ onVerify, disabled }: { onVerify: (value: string) => void; disabled?: boolean }) {
+/**
+ * Search invitations by guest name (GET /checkin/search?q=&eventId=). `showEventStatus` marks
+ * guests who are not on the list for the chosen event (when the celebration has several).
+ */
+export function NameSearch({
+  onVerify,
+  disabled,
+  eventId,
+  showEventStatus = false,
+}: {
+  onVerify: (value: string) => void;
+  disabled?: boolean;
+  eventId?: string;
+  showEventStatus?: boolean;
+}) {
   const [draft, setDraft] = useState('');
   const [q, setQ] = useState('');
   useEffect(() => {
@@ -59,8 +72,8 @@ export function NameSearch({ onVerify, disabled }: { onVerify: (value: string) =
   }, [draft]);
 
   const results = useQuery({
-    queryKey: [...adminKeys.checkinOverview, 'search', q],
-    queryFn: ({ signal }) => api.get<CheckInSearchResult[]>('/checkin/search', { q }, signal),
+    queryKey: [...adminKeys.checkinOverview, 'search', eventId ?? null, q],
+    queryFn: ({ signal }) => api.get<CheckInSearchResult[]>('/checkin/search', eventId ? { q, eventId } : { q }, signal),
     enabled: q.length >= 2,
     staleTime: 10_000,
   });
@@ -113,6 +126,8 @@ export function NameSearch({ onVerify, disabled }: { onVerify: (value: string) =
                   </span>
                   {r.status === 'REVOKED' ? (
                     <Badge tone="danger">Revoked</Badge>
+                  ) : showEventStatus && !r.forThisEvent ? (
+                    <Badge tone="neutral">Not on this list</Badge>
                   ) : r.checkedIn ? (
                     <Badge tone="warning">Checked in</Badge>
                   ) : (

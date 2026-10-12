@@ -1,14 +1,53 @@
 import { useId } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { AlertTriangle } from 'lucide-react';
-import type { AdminGuestListItem, RsvpResponse } from '@birthday/types';
-import { categoriesQuery } from '@/lib/admin-queries';
+import { AlertTriangle, Check } from 'lucide-react';
+import type { AdminEvent, AdminGuestListItem, RsvpResponse } from '@birthday/types';
+import { categoriesQuery, eventsQuery } from '@/lib/admin-queries';
 import { Badge, StatusBadge } from '@/components/ui/badge';
 import { formatRelative } from '@/lib/utils';
 import { ACheckbox } from '../ui';
 
 export function useGuestCategories() {
   return useQuery(categoriesQuery);
+}
+
+/** The celebration's events in display order (for filters and per-event details). */
+export function useEvents() {
+  return useQuery(eventsQuery);
+}
+
+/** Events a guest in `categoryId` is invited to by category rules (no categories ticked = everyone). */
+export function coveredByCategory(event: Pick<AdminEvent, 'invitedCategoryIds'>, categoryId: string | null): boolean {
+  return event.invitedCategoryIds.length === 0 || (!!categoryId && event.invitedCategoryIds.includes(categoryId));
+}
+
+/** One chip per event the guest will attend: name, people coming to it, and a tick once checked in there. */
+export function EventChips({ guestEvents, events }: { guestEvents: AdminGuestListItem['events']; events: AdminEvent[] | undefined }) {
+  if (guestEvents.length === 0) return <span className="text-muted">—</span>;
+  return (
+    <span className="flex flex-wrap gap-1">
+      {guestEvents.map((g) => {
+        const name = events?.find((e) => e.id === g.eventId)?.name ?? 'Event';
+        const people = 1 + g.companionCount;
+        return (
+          <span
+            key={g.eventId}
+            className="inline-flex items-center gap-1 whitespace-nowrap rounded-full bg-navy/[0.06] px-2 py-0.5 text-xs text-navy"
+            title={`${name}: ${people} ${people === 1 ? 'person' : 'people'}${g.checkedIn ? ', checked in' : ''}`}
+          >
+            {name}
+            <span className="tabular-nums text-muted">· {people}</span>
+            {g.checkedIn && (
+              <>
+                <Check className="size-3 text-success" aria-hidden />
+                <span className="sr-only">checked in</span>
+              </>
+            )}
+          </span>
+        );
+      })}
+    </span>
+  );
 }
 
 /** Category name with its colour dot (the name always carries the meaning). */

@@ -1,9 +1,9 @@
 import type { ReactNode } from 'react';
 import { motion, type Variants } from 'motion/react';
-import { CalendarDays, Car, Clock, Mail, MapPin, Palette, Phone, Shirt, User } from 'lucide-react';
+import { CalendarDays, Car, Clock, Mail, MapPin, Palette, Phone, Shirt, User, Users } from 'lucide-react';
 import type { PublicEvent } from '@birthday/types';
-import { cn, formatEventDate, formatEventTime } from '@/lib/utils';
-import { mapHref } from './event-helpers';
+import { cn, formatEventDate } from '@/lib/utils';
+import { audienceNote, eventTimes, mapHref, type CelebrationContact } from './event-helpers';
 import { EASE } from '../reveal';
 import { onView } from '../motion';
 
@@ -35,11 +35,22 @@ function Detail({ icon, label, children, className }: { icon: ReactNode; label: 
   );
 }
 
-/** Definition list of every event detail the API provides; empty fields are left out. */
-export function EventDetails({ event, compact = false }: { event: PublicEvent; compact?: boolean }) {
-  const sameDay =
-    formatEventDate(event.startsAt, event.timezone) === formatEventDate(event.endsAt, event.timezone);
-
+/**
+ * Definition list of every detail of one event; empty fields are left out. Times are shown in the
+ * celebration's time zone. The contact block appears only when `contact` is given.
+ */
+export function EventDetails({
+  event,
+  timezone,
+  contact,
+  compact = false,
+}: {
+  event: PublicEvent;
+  timezone: string;
+  contact?: CelebrationContact | null;
+  compact?: boolean;
+}) {
+  const audience = audienceNote(event);
   return (
     <motion.dl
       className={cn('grid gap-x-10', !compact && 'sm:grid-cols-2')}
@@ -47,10 +58,10 @@ export function EventDetails({ event, compact = false }: { event: PublicEvent; c
       {...onView('hidden', 'show')}
     >
       <Detail icon={<CalendarDays />} label="Date">
-        <time dateTime={event.startsAt}>{formatEventDate(event.startsAt, event.timezone)}</time>
+        <time dateTime={event.startsAt}>{formatEventDate(event.startsAt, timezone)}</time>
       </Detail>
       <Detail icon={<Clock />} label="Time">
-        {formatEventTime(event.startsAt, event.timezone)} – {sameDay ? formatEventTime(event.endsAt, event.timezone) : `${formatEventDate(event.endsAt, event.timezone)}, ${formatEventTime(event.endsAt, event.timezone)}`}
+        {eventTimes(event, timezone)}
       </Detail>
       <Detail icon={<MapPin />} label="Venue" className={cn(!compact && 'sm:col-span-2')}>
         <span className="font-medium">{event.venueName}</span>
@@ -76,23 +87,28 @@ export function EventDetails({ event, compact = false }: { event: PublicEvent; c
           {event.theme}
         </Detail>
       )}
+      {audience && (
+        <Detail icon={<Users />} label="Guests">
+          {audience}
+        </Detail>
+      )}
       {event.parkingInfo && (
         <Detail icon={<Car />} label="Parking" className={cn(!compact && 'sm:col-span-2')}>
           {event.parkingInfo}
         </Detail>
       )}
-      {!compact && (event.contactName || event.contactEmail || event.contactPhone) && (
+      {!compact && contact && (contact.contactName || contact.contactEmail || contact.contactPhone) && (
         <Detail icon={<User />} label="Contact" className="sm:col-span-2">
-          {event.contactName && <span className="block">{event.contactName}</span>}
+          {contact.contactName && <span className="block">{contact.contactName}</span>}
           <span className="mt-1 flex flex-wrap gap-x-5 gap-y-1 text-sm">
-            {event.contactEmail && (
-              <a href={`mailto:${event.contactEmail}`} className="inline-flex items-center gap-1.5 text-emerald hover:text-navy">
-                <Mail className="size-3.5" aria-hidden /> {event.contactEmail}
+            {contact.contactEmail && (
+              <a href={`mailto:${contact.contactEmail}`} className="inline-flex items-center gap-1.5 text-emerald hover:text-navy">
+                <Mail className="size-3.5" aria-hidden /> {contact.contactEmail}
               </a>
             )}
-            {event.contactPhone && (
-              <a href={`tel:${event.contactPhone.replace(/[^\d+]/g, '')}`} className="inline-flex items-center gap-1.5 text-emerald hover:text-navy">
-                <Phone className="size-3.5" aria-hidden /> {event.contactPhone}
+            {contact.contactPhone && (
+              <a href={`tel:${contact.contactPhone.replace(/[^\d+]/g, '')}`} className="inline-flex items-center gap-1.5 text-emerald hover:text-navy">
+                <Phone className="size-3.5" aria-hidden /> {contact.contactPhone}
               </a>
             )}
           </span>

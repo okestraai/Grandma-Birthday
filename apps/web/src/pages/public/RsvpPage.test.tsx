@@ -1,35 +1,48 @@
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router';
 import { MotionGlobalConfig } from 'motion/react';
-import type { RsvpFormConfig, RsvpInvitePrefill, SiteOverview, SubmitRsvpResult } from '@birthday/types';
+import type { RsvpEventOption, RsvpFormConfig, RsvpInvitePrefill, SiteOverview, SubmitRsvpResult } from '@birthday/types';
 import RsvpPage from './RsvpPage';
 
 MotionGlobalConfig.skipAnimations = true;
 
 const site = {
-  event: {
+  celebration: {
     name: 'A 70th Birthday Celebration',
     tagline: null,
     description: null,
     startsAt: '2026-11-21T16:00:00.000Z',
     endsAt: '2026-11-21T22:00:00.000Z',
     timezone: 'Africa/Lagos',
-    venueName: 'The Grand Hall',
-    address: '1 Marina Road',
-    city: 'Lagos',
-    mapUrl: null,
-    latitude: null,
-    longitude: null,
-    theme: null,
-    dressCode: null,
-    parkingInfo: null,
     contactName: 'Chidi',
     contactEmail: 'family@example.com',
     contactPhone: null,
     rsvp: { open: true, mode: 'OPEN', deadline: null, closedReason: null },
   },
+  events: [
+    {
+      id: 'dinner',
+      slug: 'dinner',
+      name: 'A 70th Birthday Celebration',
+      description: null,
+      startsAt: '2026-11-21T16:00:00.000Z',
+      endsAt: '2026-11-21T22:00:00.000Z',
+      venueName: 'The Grand Hall',
+      address: '1 Marina Road',
+      city: 'Lagos',
+      mapUrl: null,
+      latitude: null,
+      longitude: null,
+      theme: null,
+      dressCode: null,
+      parkingInfo: null,
+      rsvpEnabled: true,
+      invitedCategories: [],
+      sortOrder: 0,
+    },
+  ],
   celebrant: { fullName: 'Margaret Okonkwo', preferredName: 'Margaret', honorific: 'Dr.' },
   branding: { siteTitle: null },
 } as unknown as SiteOverview;
@@ -37,9 +50,11 @@ const site = {
 function formConfig(overrides: Partial<RsvpFormConfig> = {}): RsvpFormConfig {
   return {
     availability: { open: true, mode: 'OPEN', deadline: null, closedReason: null },
+    rsvpScope: 'PER_EVENT',
     allowCompanions: true,
     maxCompanions: 3,
     categories: [],
+    events: [],
     tributes: { open: true, requireApproval: true },
     questions: [],
     ...overrides,
@@ -122,6 +137,7 @@ describe('RsvpPage', () => {
         phone: null,
         categoryName: 'Family',
         allowedCompanions: 1,
+        events: [],
         existing: null,
       },
     });
@@ -169,6 +185,7 @@ describe('RsvpPage', () => {
         guestName: 'Ada Obi',
         tributeStatus: null,
         companionCount: 0,
+        events: [],
         emailSent: true,
       },
     });
@@ -262,5 +279,128 @@ describe('RsvpPage', () => {
     expect(screen.getByText(/the places set aside for Family guests are all taken/)).toBeInTheDocument();
     expect(await screen.findByRole('heading', { name: 'Your details' })).toBeInTheDocument();
     expect(screen.getByRole('option', { name: 'Family (full)' })).toBeDisabled();
+  });
+
+  describe('with several events', () => {
+    const option = (id: string, name: string, startsAt: string, invitedCategoryIds: string[] = []): RsvpEventOption => ({
+      id,
+      slug: id,
+      name,
+      startsAt,
+      endsAt: new Date(new Date(startsAt).getTime() + 3 * 3600_000).toISOString(),
+      venueName: `${name} venue`,
+      city: 'Lagos',
+      invitedCategoryIds,
+      full: false,
+    });
+    const events = [
+      option('service', 'Thanksgiving Service', '2026-11-21T09:00:00.000Z'),
+      option('dinner', 'Birthday Dinner', '2026-11-21T16:00:00.000Z'),
+      option('brunch', 'Family Brunch', '2026-11-22T11:00:00.000Z', ['family']),
+    ];
+    const categories = [
+      { id: 'family', name: 'Family', description: null, defaultCompanions: 2, full: false },
+      { id: 'friends', name: 'Friends', description: null, defaultCompanions: 1, full: false },
+    ];
+    const submitted = {
+      response: 'ATTENDING' as const,
+      invitationToken: 'inv-token',
+      invitationCode: 'AB12CD',
+      guestName: 'Ada Obi',
+      tributeStatus: null,
+      companionCount: 1,
+      events: [],
+      emailSent: true,
+    };
+
+    async function toEvents(user: ReturnType<typeof userEvent.setup>, category: string) {
+      await fillDetails(user);
+      await user.selectOptions(screen.getByLabelText(/How do you know the family/), category);
+      await user.click(screen.getByRole('button', { name: /Continue/ }));
+      await user.click(await screen.findByRole('radio', { name: /Joyfully accepts/ }));
+    }
+
+    it('offers only the events for the chosen category and sends the ticked ones', async () => {
+      const fetchMock = mockApi({ config: formConfig({ categories, events }), submit: submitted });
+      const user = userEvent.setup();
+      renderPage();
+      await toEvents(user, 'friends');
+
+      expect(await screen.findByRole('checkbox', { name: /Thanksgiving Service/ })).toBeInTheDocument();
+      expect(screen.getByRole('checkbox', { name: /Birthday Dinner/ })).toBeInTheDocument();
+      expect(screen.queryByRole('checkbox', { name: /Family Brunch/ })).not.toBeInTheDocument();
+
+      // At least one event must be ticked.
+      await user.click(screen.getByRole('button', { name: /Continue/ }));
+      expect(await screen.findByText('Please choose at least one event.')).toBeInTheDocument();
+
+      await user.click(screen.getByRole('button', { name: 'Add a guest' }));
+      await user.type(screen.getByLabelText(/Full name/), 'Bola Obi');
+      await user.click(screen.getByRole('checkbox', { name: /Birthday Dinner/ }));
+      await user.click(screen.getByRole('checkbox', { name: /Thanksgiving Service/ }));
+      await user.selectOptions(screen.getByLabelText('Accompanying guests at Thanksgiving Service'), '0');
+      await user.click(screen.getByRole('button', { name: /Continue/ }));
+      await screen.findByRole('heading', { name: 'Your preferences' });
+      await user.click(screen.getByRole('button', { name: /Continue/ }));
+      await screen.findByRole('heading', { name: 'Please review your reply' });
+      expect(screen.getByText('Birthday Dinner')).toBeInTheDocument();
+      await user.click(screen.getByRole('button', { name: 'Confirm my attendance' }));
+
+      await screen.findByRole('heading', { name: "You're on the guest list." });
+      const post = fetchMock.mock.calls.find(([, init]) => init?.method === 'POST');
+      expect(JSON.parse(String(post?.[1]?.body)).events).toEqual([
+        { eventId: 'service', companionCount: 0 },
+        { eventId: 'dinner', companionCount: 1 },
+      ]);
+    });
+
+    it('shows family-only events to family guests', async () => {
+      mockApi({ config: formConfig({ categories, events }) });
+      const user = userEvent.setup();
+      renderPage();
+      await toEvents(user, 'family');
+      expect(await screen.findByRole('checkbox', { name: /Family Brunch/ })).toBeInTheDocument();
+      expect(screen.getAllByRole('checkbox')).toHaveLength(3);
+    });
+
+    it('lists the events a whole-celebration reply covers instead of asking', async () => {
+      const fetchMock = mockApi({ config: formConfig({ categories, events, rsvpScope: 'WHOLE_CELEBRATION' }), submit: submitted });
+      const user = userEvent.setup();
+      renderPage();
+      await toEvents(user, 'friends');
+
+      const covered = await screen.findByRole('region', { name: 'Your reply covers these events' });
+      expect(within(covered).getByText('Thanksgiving Service')).toBeInTheDocument();
+      expect(within(covered).getByText('Birthday Dinner')).toBeInTheDocument();
+      expect(within(covered).queryByText('Family Brunch')).not.toBeInTheDocument();
+      expect(screen.queryByRole('checkbox')).not.toBeInTheDocument();
+
+      await user.click(screen.getByRole('button', { name: /Continue/ }));
+      await screen.findByRole('heading', { name: 'Your preferences' });
+      await user.click(screen.getByRole('button', { name: /Continue/ }));
+      await screen.findByRole('heading', { name: 'Please review your reply' });
+      expect(screen.getByText('Thanksgiving Service')).toBeInTheDocument();
+      await user.click(screen.getByRole('button', { name: 'Confirm my attendance' }));
+      await screen.findByRole('heading', { name: "You're on the guest list." });
+      const post = fetchMock.mock.calls.find(([, init]) => init?.method === 'POST');
+      expect(JSON.parse(String(post?.[1]?.body))).not.toHaveProperty('events');
+    });
+
+    it('asks nothing about events when only one is offered', async () => {
+      const fetchMock = mockApi({ config: formConfig({ events: [events[1]] }), submit: submitted });
+      const user = userEvent.setup();
+      renderPage();
+      await fillDetails(user);
+      await user.click(screen.getByRole('button', { name: /Continue/ }));
+      await user.click(await screen.findByRole('radio', { name: /Joyfully accepts/ }));
+      expect(screen.queryByRole('checkbox')).not.toBeInTheDocument();
+      await user.click(screen.getByRole('button', { name: /Continue/ }));
+      await screen.findByRole('heading', { name: 'Your preferences' });
+      await user.click(screen.getByRole('button', { name: /Continue/ }));
+      await user.click(await screen.findByRole('button', { name: 'Confirm my attendance' }));
+      await screen.findByRole('heading', { name: "You're on the guest list." });
+      const post = fetchMock.mock.calls.find(([, init]) => init?.method === 'POST');
+      expect(JSON.parse(String(post?.[1]?.body)).events).toEqual([{ eventId: 'dinner', companionCount: 0 }]);
+    });
   });
 });

@@ -27,15 +27,15 @@ describe('RSVP, invitations and check-in (e2e)', () => {
   });
 
   it('enforces the companion limit on the server', async () => {
-    await ctx.prisma.event.update({ where: { id: 1 }, data: { defaultCompanions: 1 } });
+    await ctx.prisma.celebration.update({ where: { id: 1 }, data: { defaultCompanions: 1 } });
     const res = await ctx.http().post('/api/rsvp').send(rsvp('big@example.com', ['A One', 'B Two'])).expect(422);
     expect(res.body.code).toBe('COMPANION_LIMIT_EXCEEDED');
-    await ctx.prisma.event.update({ where: { id: 1 }, data: { allowCompanions: false } });
+    await ctx.prisma.celebration.update({ where: { id: 1 }, data: { allowCompanions: false } });
     await ctx.http().post('/api/rsvp').send(rsvp('solo@example.com', ['A One'])).expect(422);
   });
 
   it('never lets concurrent RSVPs exceed capacity', async () => {
-    await ctx.prisma.event.update({ where: { id: 1 }, data: { capacity: 5 } });
+    await ctx.prisma.celebration.update({ where: { id: 1 }, data: { capacity: 5 } });
     const results = await Promise.all(
       Array.from({ length: 8 }, (_, i) => ctx.http().post('/api/rsvp').send(rsvp(`p${i}@example.com`, ['Friend Name']))),
     );
@@ -52,9 +52,9 @@ describe('RSVP, invitations and check-in (e2e)', () => {
   it('respects closed RSVPs, invite-only mode and duplicate emails', async () => {
     await ctx.http().post('/api/rsvp').send(rsvp('twice@example.com')).expect(201);
     expect((await ctx.http().post('/api/rsvp').send(rsvp('TWICE@example.com'))).body.code).toBe('RSVP_ALREADY_EXISTS');
-    await ctx.prisma.event.update({ where: { id: 1 }, data: { rsvpMode: 'INVITE_ONLY' } });
+    await ctx.prisma.celebration.update({ where: { id: 1 }, data: { rsvpMode: 'INVITE_ONLY' } });
     expect((await ctx.http().post('/api/rsvp').send(rsvp('new@example.com'))).body.code).toBe('RSVP_INVITE_REQUIRED');
-    await ctx.prisma.event.update({ where: { id: 1 }, data: { rsvpOpen: false } });
+    await ctx.prisma.celebration.update({ where: { id: 1 }, data: { rsvpOpen: false } });
     expect((await ctx.http().post('/api/rsvp').send(rsvp('new@example.com'))).body.code).toBe('RSVP_CLOSED');
   });
 

@@ -10,6 +10,8 @@ export interface CalendarEvent {
   location?: string | null;
   description?: string | null;
   url?: string | null;
+  /** Short name for links that list several events, e.g. "Birthday Dinner". */
+  label?: string;
 }
 
 function utcStamp(iso: string | Date): string {
@@ -37,13 +39,8 @@ function fold(line: string): string {
   return parts.join('\r\n');
 }
 
-export function buildIcs(event: CalendarEvent, now: Date = new Date()): string {
+function vevent(event: CalendarEvent, now: Date): string[] {
   const lines = [
-    'BEGIN:VCALENDAR',
-    'VERSION:2.0',
-    'PRODID:-//Birthday Platform//Celebration//EN',
-    'CALSCALE:GREGORIAN',
-    'METHOD:PUBLISH',
     'BEGIN:VEVENT',
     `UID:${event.uid}`,
     `DTSTAMP:${utcStamp(now)}`,
@@ -55,13 +52,28 @@ export function buildIcs(event: CalendarEvent, now: Date = new Date()): string {
   if (event.description) lines.push(`DESCRIPTION:${escapeIcsText(event.description)}`);
   if (event.url) lines.push(`URL:${event.url}`);
   lines.push('BEGIN:VALARM', 'TRIGGER:-P1D', 'ACTION:DISPLAY', `DESCRIPTION:${escapeIcsText(event.title)}`, 'END:VALARM');
-  lines.push('END:VEVENT', 'END:VCALENDAR');
+  lines.push('END:VEVENT');
+  return lines;
+}
+
+/** One calendar file with a VEVENT per event, so several events are added in one go. */
+export function buildIcs(events: CalendarEvent | CalendarEvent[], now: Date = new Date()): string {
+  const list = Array.isArray(events) ? events : [events];
+  const lines = [
+    'BEGIN:VCALENDAR',
+    'VERSION:2.0',
+    'PRODID:-//Birthday Platform//Celebration//EN',
+    'CALSCALE:GREGORIAN',
+    'METHOD:PUBLISH',
+    ...list.flatMap((event) => vevent(event, now)),
+    'END:VCALENDAR',
+  ];
   return lines.map(fold).join('\r\n') + '\r\n';
 }
 
 /** Triggers a download of the .ics file in the browser. */
-export function downloadIcs(event: CalendarEvent, filename = 'celebration.ics'): void {
-  const blob = new Blob([buildIcs(event)], { type: 'text/calendar;charset=utf-8' });
+export function downloadIcs(events: CalendarEvent | CalendarEvent[], filename = 'celebration.ics'): void {
+  const blob = new Blob([buildIcs(events)], { type: 'text/calendar;charset=utf-8' });
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;

@@ -9,22 +9,31 @@ import { PaginationQuery } from '../common/utils/pagination';
 import { Clean } from '../common/utils/text';
 import { CheckInService } from './checkin.service';
 
+const EVENT_HELP = 'The event being checked in to. May be left out only when there is one event.';
+
 class VerifyDto {
   @ApiProperty({ description: 'Scanned QR text (URL or token) or a typed invitation code' }) @IsString() @MinLength(1) @MaxLength(500) value: string;
+  @ApiPropertyOptional({ description: EVENT_HELP }) @IsOptional() @IsUUID() eventId?: string;
 }
 
 class CheckInDto {
   @ApiProperty() @IsUUID() invitationId: string;
+  @ApiPropertyOptional({ description: EVENT_HELP }) @IsOptional() @IsUUID() eventId?: string;
   @ApiPropertyOptional() @IsOptional() @IsInt() @Min(1) @Max(50) partySize?: number;
   @ApiPropertyOptional() @IsOptional() @IsString() @MaxLength(200) deviceInfo?: string;
 }
 
-class SearchQuery {
+class EventQuery {
+  @ApiPropertyOptional({ description: 'Defaults to the event in progress, else the next to start, else the last' }) @IsOptional() @IsUUID() eventId?: string;
+}
+
+class SearchQuery extends EventQuery {
   @ApiProperty() @IsString() @MaxLength(100) q: string;
 }
 
 class ListQuery extends PaginationQuery {
   @ApiPropertyOptional() @IsOptional() @Transform(({ value }) => value === 'true' || value === true) @IsBoolean() includeReversed?: boolean;
+  @ApiPropertyOptional() @IsOptional() @IsUUID() eventId?: string;
 }
 
 class ReverseDto {
@@ -41,25 +50,25 @@ export class CheckInController {
   @HttpCode(200)
   @RequirePermissions('checkin:use')
   verify(@Body() dto: VerifyDto): Promise<CheckInVerifyResult> {
-    return this.checkins.verify(dto.value);
+    return this.checkins.verify(dto.value, dto.eventId);
   }
 
   @Post('checkin')
   @RequirePermissions('checkin:use')
   checkIn(@Body() dto: CheckInDto, @Req() req: RequestWithUser): Promise<CheckInRecord> {
-    return this.checkins.checkIn(dto.invitationId, dto.partySize, dto.deviceInfo, requestMeta(req));
+    return this.checkins.checkIn(dto.invitationId, dto.eventId, dto.partySize, dto.deviceInfo, requestMeta(req));
   }
 
   @Get('checkin/recent')
   @RequirePermissions('checkin:use')
-  recent(): Promise<CheckInOverview> {
-    return this.checkins.overview();
+  recent(@Query() query: EventQuery): Promise<CheckInOverview> {
+    return this.checkins.overview(query.eventId);
   }
 
   @Get('checkin/search')
   @RequirePermissions('checkin:use')
   search(@Query() query: SearchQuery): Promise<CheckInSearchResult[]> {
-    return this.checkins.search(query.q);
+    return this.checkins.search(query.q, query.eventId);
   }
 
   @Get('admin/checkins')

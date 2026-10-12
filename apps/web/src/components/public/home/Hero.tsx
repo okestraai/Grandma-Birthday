@@ -3,7 +3,6 @@ import { motion, useReducedMotion, useScroll, useSpring, useTransform, type Moti
 import { ArrowDown, RotateCcw } from 'lucide-react';
 import type { PublicMedia, SiteOverview } from '@birthday/types';
 import { celebrantName } from '@/lib/public-api';
-import { formatEventDate } from '@/lib/utils';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
 import { MediaImage, mediaPlaceholder, mediaSrc, mediaSrcSet, useImageFallback } from '../media';
@@ -14,8 +13,9 @@ import { HERO_OVERLAY_OPACITY_WHEN_LIVE } from '../effects/settings';
 import { HeroIntro, INTRO_SECONDS, useIntro } from './HeroIntro';
 import { ConfettiBurst, CountUp, MagneticLink, MouseLayer, SplitText, Sparkles, TiltCard, useOnScreen, usePointerPosition } from '../motion';
 import { cn } from '@/lib/utils';
+import { celebrationDates, celebrationPlace, nextEvent } from '../event/event-helpers';
 
-/** Whole days from now until the event starts; null once it has begun. */
+/** Whole days from now until the next event starts; null once it has begun. */
 function daysUntil(iso: string): number | null {
   const ms = new Date(iso).getTime() - Date.now();
   if (!Number.isFinite(ms) || ms <= 0) return null;
@@ -141,7 +141,7 @@ export function HeroUnavailable({ onRetry, retrying = false }: { onRetry: () => 
 }
 
 export function Hero({ site }: { site: SiteOverview }) {
-  const { celebrant, event, branding } = site;
+  const { celebrant, celebration, branding } = site;
   const reduce = useReducedMotion();
   const pointer = usePointerPosition();
   const { scrollY } = useScroll();
@@ -182,7 +182,12 @@ export function Hero({ site }: { site: SiteOverview }) {
   const heroMedia = branding.hero ?? null;
   const age = celebrant.age ?? 70;
   const headline = celebrant.heroHeadline ?? 'Years of Life. Love. Legacy.';
-  const days = daysUntil(event.startsAt);
+  const upcoming = nextEvent(site.events);
+  const days = upcoming ? daysUntil(upcoming.startsAt) : null;
+  // Once the first event has begun, the countdown names the event it now counts down to.
+  const later = upcoming && site.events.some((e) => e.startsAt < upcoming.startsAt) ? upcoming.name : null;
+  const daysLabel = later ? `${days === 1 ? 'day' : 'days'} until ${later}` : days === 1 ? 'day to go' : 'days to go';
+  const place = site.events.length ? celebrationPlace(site) : null;
 
   // A tap on the "70" throws a little confetti. Decorative, so pointer only.
   const celebrate = (e: PointerEvent<HTMLDivElement>) => {
@@ -242,14 +247,18 @@ export function Hero({ site }: { site: SiteOverview }) {
           </h1>
           <motion.div variants={staggerChild} className="mx-auto mt-5 h-px w-24 bg-gradient-to-r from-transparent via-gold to-transparent lg:mx-0 lg:bg-gradient-to-r lg:from-gold lg:to-transparent" />
           <motion.p variants={staggerChild} className="mt-5 text-sm leading-relaxed text-ivory/80 sm:text-[15px]">
-            <time dateTime={event.startsAt}>{formatEventDate(event.startsAt, event.timezone)}</time>
-            <span aria-hidden className="mx-2 text-gold">·</span>
-            <span>{event.venueName}{event.city ? `, ${event.city}` : ''}</span>
+            <time dateTime={celebration.startsAt}>{celebrationDates(site)}</time>
+            {place && (
+              <>
+                <span aria-hidden className="mx-2 text-gold">·</span>
+                <span>{place}</span>
+              </>
+            )}
           </motion.p>
           {days !== null && (
             <motion.p variants={staggerChild} className="mt-4 inline-flex items-baseline gap-2 rounded-full border border-gold/30 bg-navy/60 px-4 py-1.5 text-ivory/80">
               <CountUp value={days} duration={2.2} className="font-display text-xl text-gold" />
-              <span className="text-[11px] uppercase tracking-[0.25em]">{days === 1 ? 'day to go' : 'days to go'}</span>
+              <span className="text-[11px] uppercase tracking-[0.25em]">{daysLabel}</span>
             </motion.p>
           )}
           <motion.div variants={staggerChild} className="mt-9 flex flex-col items-stretch justify-center gap-3 sm:flex-row sm:items-center lg:justify-start">

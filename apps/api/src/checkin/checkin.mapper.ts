@@ -3,6 +3,7 @@ import { Prisma } from '../generated/prisma/client';
 
 export const CHECKIN_INCLUDE = {
   invitation: { select: { code: true } },
+  event: { select: { name: true } },
   guest: { select: { fullName: true, category: { select: { name: true } } } },
   checkedInBy: { select: { name: true } },
   reversedBy: { select: { name: true } },
@@ -14,6 +15,8 @@ export function toCheckInRecord(row: CheckInRow): CheckInRecord {
   return {
     id: row.id,
     invitationId: row.invitationId,
+    eventId: row.eventId,
+    eventName: row.event.name,
     code: row.invitation.code,
     guestName: row.guest.fullName,
     categoryName: row.guest.category?.name ?? null,

@@ -1,6 +1,8 @@
-import type { RsvpFormConfig, RsvpQuestion } from '@birthday/types';
+import type { RsvpEventOption, RsvpFormConfig, RsvpQuestion } from '@birthday/types';
 import {
+  asksForEvents,
   buildSubmitBody,
+  chosenEvents,
   companionLimit,
   createStepSchemas,
   defaultValues,
@@ -9,6 +11,7 @@ import {
   partySize,
   sortQuestions,
   stepForField,
+  visibleEvents,
   type RsvpValues,
 } from './schema';
 
@@ -26,6 +29,8 @@ const config: RsvpFormConfig = {
     { id: 'family', name: 'Family', description: null, defaultCompanions: 5, full: false },
     { id: 'friends', name: 'Friends', description: null, defaultCompanions: 1, full: false },
   ],
+  rsvpScope: 'PER_EVENT',
+  events: [],
   questions,
   tributes: { open: true, requireApproval: true },
 };
@@ -154,9 +159,11 @@ describe('defaultValues and partySize', () => {
       phone: null,
       categoryName: 'Family',
       allowedCompanions: 2,
+      events: [],
       existing: {
         response: 'ATTENDING',
         companionCount: 1,
+        events: [],
         companions: [{ fullName: 'Bola', dietary: null }],
         dietary: null,
         tribute: { message: 'Happy birthday, Aunty!', relationship: 'Niece', status: 'PENDING' },
@@ -196,12 +203,112 @@ describe('birthday message in the RSVP', () => {
 
   it('prefills an existing message and maps server errors to the right field', () => {
     const v = defaultValues(questions, {
-      fullName: 'Ada', email: 'ada@example.com', phone: null, categoryName: null, allowedCompanions: 0,
-      existing: { response: 'DECLINED', companionCount: 0, companions: [], dietary: null, accessibility: null, message: null, answers: {},
+      fullName: 'Ada', email: 'ada@example.com', phone: null, categoryName: null, allowedCompanions: 0, events: [],
+      existing: { response: 'DECLINED', companionCount: 0, events: [], companions: [], dietary: null, accessibility: null, message: null, answers: {},
         tribute: { message: 'Old words', relationship: 'Friend', status: 'APPROVED' } },
     });
     expect(v.message).toBe('Old words');
     expect(v.tributeRelationship).toBe('Friend');
     expect(stepForField('tribute.message')).toBe(2);
+  });
+});
+
+describe('events in the RSVP', () => {
+  const event = (id: string, invitedCategoryIds: string[] = []): RsvpEventOption => ({
+    id,
+    slug: id,
+    name: id,
+    startsAt: '2026-11-21T09:00:00.000Z',
+    endsAt: '2026-11-21T11:00:00.000Z',
+    venueName: 'Venue',
+    city: null,
+    invitedCategoryIds,
+    full: false,
+  });
+  const withEvents = { ...config, events: [event('service'), event('dinner'), event('brunch', ['family'])] };
+  const open = { config: withEvents, invited: false, allowedCompanions: null };
+  const companions = [{ fullName: 'Bola Obi', dietary: '' }];
+  const base = {
+    ...defaultValues(sortQuestions(questions), null, withEvents.events),
+    fullName: 'Ada Obi',
+    email: 'ada@example.com',
+    response: 'ATTENDING' as const,
+    answers: { 'q-meal': 'Fish', 'q-song': '', 'q-photo': true },
+    companions,
+  };
+
+  it('filters events by the category chosen in the open form, but not on an invitation', () => {
+    expect(visibleEvents(open, 'friends').map((e) => e.id)).toEqual(['service', 'dinner']);
+    expect(visibleEvents(open, 'family').map((e) => e.id)).toEqual(['service', 'dinner', 'brunch']);
+    expect(visibleEvents(open, '').map((e) => e.id)).toEqual(['service', 'dinner']);
+    const invited = { config: withEvents, invited: true, allowedCompanions: 1, events: [event('brunch', ['family'])] };
+    expect(visibleEvents(invited, '').map((e) => e.id)).toEqual(['brunch']);
+    expect(asksForEvents(invited, '')).toBe(false);
+  });
+
+  it('requires a ticked event when several are offered, and sends only visible ticked ones', () => {
+    const values = { ...base, categoryId: 'friends' };
+    const [, guests] = createStepSchemas(open);
+    expect(guests.safeParse(values).success).toBe(false);
+
+    const ticked = {
+      ...values,
+      events: [
+        { eventId: 'dinner', selected: true, companionCount: null },
+        { eventId: 'brunch', selected: true, companionCount: 0 },
+        { eventId: 'service', selected: true, companionCount: 5 },
+      ],
+    };
+    expect(guests.safeParse(ticked).success).toBe(true);
+    expect(chosenEvents(ticked, open).map((c) => [c.event.id, c.companionCount])).toEqual([
+      ['service', 1],
+      ['dinner', 1],
+    ]);
+    expect(buildSubmitBody(ticked, open).events).toEqual([
+      { eventId: 'service', companionCount: 1 },
+      { eventId: 'dinner', companionCount: 1 },
+    ]);
+    expect(buildSubmitBody({ ...ticked, response: 'DECLINED' }, open).events).toBeUndefined();
+  });
+
+  it('replies to the only event without asking', () => {
+    const single = { config: { ...config, events: [event('dinner')] }, invited: false, allowedCompanions: null };
+    const values = { ...base, categoryId: 'friends', events: [] };
+    expect(asksForEvents(single, 'friends')).toBe(false);
+    expect(buildSubmitBody(values, single).events).toEqual([{ eventId: 'dinner', companionCount: 1 }]);
+  });
+
+  it('ticks the events from an earlier reply', () => {
+    const prefill = {
+      fullName: 'Ada', email: 'ada@example.com', phone: null, categoryName: 'Family', allowedCompanions: 2,
+      events: withEvents.events,
+      existing: { response: 'ATTENDING' as const, companionCount: 2, events: [{ eventId: 'brunch', companionCount: 1 }, { eventId: 'dinner', companionCount: 2 }],
+        companions: [], dietary: null, accessibility: null, message: null, answers: {}, tribute: null },
+    };
+    expect(defaultValues(questions, prefill).events).toEqual([
+      { eventId: 'service', selected: false, companionCount: null },
+      { eventId: 'dinner', selected: true, companionCount: null },
+      { eventId: 'brunch', selected: true, companionCount: 1 },
+    ]);
+    expect(stepForField('events.0.eventId')).toBe(1);
+  });
+});
+
+describe('a whole-celebration reply', () => {
+  const event = (id: string): RsvpEventOption => ({
+    id, slug: id, name: id, startsAt: '2026-11-21T09:00:00.000Z', endsAt: '2026-11-21T11:00:00.000Z', venueName: 'Venue', city: null, invitedCategoryIds: [], full: false,
+  });
+  const whole = { config: { ...config, rsvpScope: 'WHOLE_CELEBRATION' as const, events: [event('service'), event('dinner')] }, invited: false, allowedCompanions: null };
+
+  it('asks nothing about events, covers them all and leaves them to the server', () => {
+    const values = {
+      ...defaultValues(sortQuestions(questions), null, whole.config.events),
+      fullName: 'Ada Obi', email: 'ada@example.com', categoryId: 'friends', response: 'ATTENDING' as const,
+      answers: { 'q-meal': 'Fish', 'q-song': '', 'q-photo': true },
+    };
+    expect(asksForEvents(whole, 'friends')).toBe(false);
+    expect(createStepSchemas(whole)[1].safeParse(values).success).toBe(true);
+    expect(chosenEvents(values, whole).map((c) => c.event.id)).toEqual(['service', 'dinner']);
+    expect(buildSubmitBody(values, whole)).not.toHaveProperty('events');
   });
 });

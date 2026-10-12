@@ -1,6 +1,8 @@
 import { z } from 'zod';
 import type {
   PublicGuestCategory,
+  RsvpEventChoice,
+  RsvpEventOption,
   RsvpFormConfig,
   RsvpInvitePrefill,
   RsvpQuestion,
@@ -22,6 +24,13 @@ export interface CompanionValues {
   dietary: string;
 }
 
+/** One event the guest may tick. `companionCount` null means all their companions come. */
+export interface EventChoiceValues {
+  eventId: string;
+  selected: boolean;
+  companionCount: number | null;
+}
+
 export interface RsvpValues {
   fullName: string;
   email: string;
@@ -29,6 +38,8 @@ export interface RsvpValues {
   categoryId: string;
   response: RsvpResponse | '';
   companions: CompanionValues[];
+  /** One entry per event the guest might reply to; which are shown depends on the category. */
+  events: EventChoiceValues[];
   dietary: string;
   accessibility: string;
   /** Optional birthday message (saved as a testimonial for review). */
@@ -89,6 +100,48 @@ export interface RsvpSchemaContext {
   /** Set for guests arriving from a personal invitation link. */
   invited: boolean;
   allowedCompanions: number | null;
+  /** The events this guest may reply to: their invitation's, or the open form's. Defaults to the form's. */
+  events?: RsvpEventOption[];
+}
+
+/** The events the guest may reply to before any category filter. */
+export function eventOptions(ctx: Pick<RsvpSchemaContext, 'config' | 'events'>): RsvpEventOption[] {
+  return ctx.events ?? ctx.config.events;
+}
+
+/**
+ * The events offered to this guest. An invitation's events are already this guest's. In the open
+ * form, an event limited to some categories shows only when the guest picked one of them.
+ */
+export function visibleEvents(ctx: Pick<RsvpSchemaContext, 'config' | 'events' | 'invited'>, categoryId: string): RsvpEventOption[] {
+  const options = eventOptions(ctx);
+  if (ctx.invited) return options;
+  return options.filter((e) => e.invitedCategoryIds.length === 0 || e.invitedCategoryIds.includes(categoryId));
+}
+
+/** True when one yes covers every event the guest may attend (the celebration's rsvpScope). */
+export function wholeCelebration(ctx: Pick<RsvpSchemaContext, 'config'>): boolean {
+  return ctx.config.rsvpScope === 'WHOLE_CELEBRATION';
+}
+
+/** Whether the guest is asked to tick events: only when they reply per event and more than one is offered. */
+export function asksForEvents(ctx: Pick<RsvpSchemaContext, 'config' | 'events' | 'invited'>, categoryId: string): boolean {
+  return !wholeCelebration(ctx) && visibleEvents(ctx, categoryId).length > 1;
+}
+
+/** The events the guest will attend, with the companions coming to each (capped at those named). */
+export function chosenEvents(
+  values: Pick<RsvpValues, 'events' | 'categoryId' | 'companions'>,
+  ctx: Pick<RsvpSchemaContext, 'config' | 'events' | 'invited'>,
+): { event: RsvpEventOption; companionCount: number }[] {
+  const named = ctx.config.allowCompanions ? values.companions.length : 0;
+  const visible = visibleEvents(ctx, values.categoryId);
+  // A single event needs no ticking, and a whole-celebration reply covers them all.
+  if (visible.length === 1 || wholeCelebration(ctx)) return visible.map((event) => ({ event, companionCount: named }));
+  return visible.flatMap((event) => {
+    const choice = values.events.find((c) => c.eventId === event.id);
+    return choice?.selected ? [{ event, companionCount: Math.min(choice.companionCount ?? named, named) }] : [];
+  });
 }
 
 /** Category is asked only for open registration (no invitation) when categories exist. */
@@ -139,11 +192,15 @@ export function createStepSchemas(ctx: RsvpSchemaContext) {
       categoryId: z.string(),
       response: z.string(),
       companions: z.array(z.object({ fullName: z.string(), dietary: z.string() })),
+      events: z.array(z.object({ eventId: z.string(), selected: z.boolean(), companionCount: z.number().nullable() })),
     })
     .superRefine((value, issue) => {
       if (value.response !== 'ATTENDING' && value.response !== 'DECLINED') {
         issue.addIssue({ code: 'custom', path: ['response'], message: 'Please let us know whether you can attend.' });
         return;
+      }
+      if (value.response === 'ATTENDING' && asksForEvents(ctx, value.categoryId) && chosenEvents(value, ctx).length === 0) {
+        issue.addIssue({ code: 'custom', path: ['events'], message: 'Please choose at least one event.' });
       }
       if (value.response === 'DECLINED' || !config.allowCompanions) return;
       const limit = companionLimit(config, {
@@ -206,7 +263,7 @@ export function stepFields(step: RsvpStep, values: Pick<RsvpValues, 'companions'
     case 0:
       return ['fullName', 'email', 'phone', 'categoryId'];
     case 1:
-      return ['response', 'companions', ...values.companions.flatMap((_, i) => [`companions.${i}.fullName`, `companions.${i}.dietary`])];
+      return ['response', 'companions', 'events', ...values.companions.flatMap((_, i) => [`companions.${i}.fullName`, `companions.${i}.dietary`])];
     case 2:
       return ['dietary', 'accessibility', 'message', 'tributeRelationship', ...questions.map((q) => `answers.${q.id}`)];
     default:
@@ -224,7 +281,7 @@ export const SERVER_FIELD_ALIASES: Record<string, string> = {
 export function stepForField(path: string): RsvpStep | null {
   const root = (SERVER_FIELD_ALIASES[path] ?? path).split('.')[0];
   if (['fullName', 'email', 'phone', 'categoryId', 'inviteToken'].includes(root)) return 0;
-  if (['response', 'companions'].includes(root)) return 1;
+  if (['response', 'companions', 'events'].includes(root)) return 1;
   if (['dietary', 'accessibility', 'message', 'tributeRelationship', 'answers'].includes(root)) return 2;
   return null;
 }
@@ -241,8 +298,20 @@ function emptyAnswer(question: RsvpQuestion): string | boolean {
   return question.type === 'CHECKBOX' ? false : '';
 }
 
+/** Ticked events from an earlier reply; nothing is ticked for a new reply. */
+function eventDefaults(options: RsvpEventOption[], existing: { companionCount: number; events: RsvpEventChoice[] } | null): EventChoiceValues[] {
+  return options.map((event) => {
+    const saved = existing?.events.find((c) => c.eventId === event.id);
+    return {
+      eventId: event.id,
+      selected: Boolean(saved),
+      companionCount: saved && saved.companionCount !== existing?.companionCount ? saved.companionCount : null,
+    };
+  });
+}
+
 /** Initial form values, prefilled from a personal invitation when there is one. */
-export function defaultValues(questions: RsvpQuestion[], prefill?: RsvpInvitePrefill | null): RsvpValues {
+export function defaultValues(questions: RsvpQuestion[], prefill?: RsvpInvitePrefill | null, options: RsvpEventOption[] = prefill?.events ?? []): RsvpValues {
   const existing = prefill?.existing ?? null;
   const answers: Record<string, string | boolean> = {};
   for (const question of questions) {
@@ -257,6 +326,7 @@ export function defaultValues(questions: RsvpQuestion[], prefill?: RsvpInvitePre
     categoryId: '',
     response: existing?.response ?? '',
     companions: (existing?.companions ?? []).map((c) => ({ fullName: c.fullName, dietary: c.dietary ?? '' })),
+    events: eventDefaults(options, existing),
     dietary: existing?.dietary ?? '',
     accessibility: existing?.accessibility ?? '',
     message: existing?.tribute?.message ?? '',
@@ -301,6 +371,9 @@ export function buildSubmitBody(
   }
 
   if (attending) {
+    // A whole-celebration reply leaves the events to the server: it records every event the guest may attend.
+    const events = wholeCelebration(ctx) ? [] : chosenEvents(values, ctx);
+    if (events.length) body.events = events.map((c) => ({ eventId: c.event.id, companionCount: c.companionCount }));
     const dietary = optional(values.dietary);
     if (dietary) body.dietary = dietary;
     const accessibility = optional(values.accessibility);

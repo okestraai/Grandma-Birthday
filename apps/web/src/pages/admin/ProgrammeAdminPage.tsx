@@ -1,33 +1,52 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
+import { useSearchParams } from 'react-router';
 import { useQuery } from '@tanstack/react-query';
 import { ArrowDownWideNarrow, MapPin, Mic, Pencil, Plus, Trash2 } from 'lucide-react';
 import type { ProgrammeItem } from '@birthday/types';
 import { api } from '@/lib/api';
 import { adminKeys, moveItem, useAdminMutation } from '@/lib/admin-api';
-import { programmeQuery } from '@/lib/admin-queries';
+import { celebrationQuery, eventsQuery, programmeEventId, programmeQuery } from '@/lib/admin-queries';
 import { formatClock } from '@/lib/utils';
-import { AButton, IconButton, PageHeader, Panel } from '@/components/admin/ui';
+import { AButton, FilterTabs, IconButton, PageHeader, Panel } from '@/components/admin/ui';
 import { DataTable, type Column } from '@/components/admin/data-table';
 import { ReorderButtons } from '@/components/admin/misc';
 import { Confirm } from '@/components/admin/overlays';
-import { ProgrammeItemDialog, programmeLine } from '@/components/admin/content/ProgrammeItemDialog';
+import { ProgrammeItemDialog, formatProgrammeDate, programmeLine } from '@/components/admin/content/ProgrammeItemDialog';
 import { useOptimisticReorder } from '@/components/admin/content/use-reorder';
+import { zonedDate } from '@/components/admin/event/event-form';
 
 type DialogState = { item: ProgrammeItem | null } | null;
 
-const timeRange = (i: ProgrammeItem) => (i.endTime ? `${formatClock(i.startTime)} – ${formatClock(i.endTime)}` : formatClock(i.startTime));
+const clock = (i: ProgrammeItem) => (i.endTime ? `${formatClock(i.startTime)} – ${formatClock(i.endTime)}` : formatClock(i.startTime));
+const timeRange = (i: ProgrammeItem) => (i.date ? `${formatProgrammeDate(i.date)}, ${clock(i)}` : clock(i));
 
 export default function ProgrammeAdminPage() {
-  const query = useQuery(programmeQuery);
+  const [searchParams, setSearchParams] = useSearchParams();
+  const events = useQuery(eventsQuery);
+  const celebration = useQuery(celebrationQuery);
+  const eventParam = searchParams.get('event');
+  const eventId = programmeEventId(events.data, eventParam);
+  const event = events.data?.find((e) => e.id === eventId);
+  const multiple = (events.data?.length ?? 0) > 1;
+  const timeZone = celebration.data?.timezone;
+  const eventDay = event && timeZone ? zonedDate(event.startsAt, timeZone) : undefined;
+
+  // An unknown event in the URL (deleted, mistyped): show the first one instead.
+  useEffect(() => {
+    if (eventParam && events.data && eventId !== eventParam) setSearchParams({}, { replace: true });
+  }, [eventParam, eventId, events.data, setSearchParams]);
+
+  const programme = programmeQuery(eventId ?? undefined);
+  const query = useQuery({ ...programme, enabled: !!eventId });
   const items = useMemo(() => (query.data ? [...query.data].sort((a, b) => a.sortOrder - b.sortOrder) : undefined), [query.data]);
 
   const [dialog, setDialog] = useState<DialogState>(null);
   const [deleting, setDeleting] = useState<ProgrammeItem | null>(null);
 
-  const reorder = useOptimisticReorder<ProgrammeItem>(adminKeys.programme, '/admin/programme/reorder');
+  const reorder = useOptimisticReorder<ProgrammeItem>(programme.queryKey, `/admin/events/${eventId}/programme/reorder`);
   const remove = useAdminMutation<void, ProgrammeItem>({
-    mutationFn: (item) => api.delete(`/admin/programme/${item.id}`),
-    invalidate: [adminKeys.programme],
+    mutationFn: (item) => api.delete(`/admin/events/${item.eventId}/programme/${item.id}`),
+    invalidate: [adminKeys.programme, adminKeys.events],
     success: (_d, item) => `“${item.title}” was removed from the programme.`,
     onSuccess: () => setDeleting(null),
   });
@@ -38,7 +57,9 @@ export default function ProgrammeAdminPage() {
     if (next !== items) reorder.mutate(next);
   };
 
-  const byTime = items ? [...items].sort((a, b) => a.startTime.localeCompare(b.startTime)) : [];
+  // Items without a date are on the event's day; compare day and time together.
+  const when = (i: ProgrammeItem) => `${i.date ?? eventDay ?? ''}T${i.startTime}`;
+  const byTime = items ? [...items].sort((a, b) => when(a).localeCompare(when(b))) : [];
   const outOfTimeOrder = !!items && byTime.some((item, i) => item.id !== items[i].id);
 
   const reorderCell = (item: ProgrammeItem) => {
@@ -93,14 +114,29 @@ export default function ProgrammeAdminPage() {
   ];
 
   const addButton = (
-    <AButton variant="emerald" onClick={() => setDialog({ item: null })}>
+    <AButton variant="emerald" disabled={!eventId} onClick={() => setDialog({ item: null })}>
       <Plus aria-hidden /> Add item
     </AButton>
   );
 
   return (
     <>
-      <PageHeader title="Programme" description="The order of events on the day, as guests see it on the programme page." actions={addButton} />
+      <PageHeader
+        title="Programme"
+        description={
+          multiple ? 'The running order of each event, as guests see it on the programme page.' : 'The order of events on the day, as guests see it on the programme page.'
+        }
+        actions={addButton}
+      />
+      {multiple && events.data && (
+        <FilterTabs
+          label="Event"
+          className="mb-3"
+          value={eventId ?? ''}
+          onChange={(id) => setSearchParams({ event: id })}
+          tabs={events.data.map((e) => ({ value: e.id, label: e.name, count: e.programmeCount }))}
+        />
+      )}
       <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_340px]">
         <div className="min-w-0">
           {outOfTimeOrder && (
@@ -112,16 +148,16 @@ export default function ProgrammeAdminPage() {
             </div>
           )}
           <DataTable
-            caption="Programme items"
+            caption={event && multiple ? `Programme items for ${event.name}` : 'Programme items'}
             columns={columns}
-            rows={items}
+            rows={eventId ? items : events.data ? [] : undefined}
             getRowId={(i) => i.id}
-            loading={query.isPending}
-            error={query.error}
-            onRetry={() => void query.refetch()}
-            emptyTitle="The programme is empty"
-            emptyDescription="Add the first item, such as guest arrival."
-            emptyAction={addButton}
+            loading={events.isPending || (!!eventId && query.isPending)}
+            error={events.error ?? query.error}
+            onRetry={() => void (events.error ? events.refetch() : query.refetch())}
+            emptyTitle={eventId ? 'The programme is empty' : 'No events yet'}
+            emptyDescription={eventId ? 'Add the first item, such as guest arrival.' : 'Add an event on the Events page first.'}
+            emptyAction={eventId ? addButton : undefined}
             mobileCard={(i) => (
               <div>
                 <p className="text-xs tabular-nums text-muted">{timeRange(i)}</p>
@@ -135,7 +171,11 @@ export default function ProgrammeAdminPage() {
             )}
           />
         </div>
-        <Panel title="Preview" description="How the running order reads." className="lg:sticky lg:top-20 lg:self-start">
+        <Panel
+          title="Preview"
+          description={event && multiple ? `How the running order of ${event.name} reads.` : 'How the running order reads.'}
+          className="lg:sticky lg:top-20 lg:self-start"
+        >
           {items && items.length > 0 ? (
             <ol className="space-y-2 text-[13px]">
               {items.map((item) => (
@@ -146,12 +186,20 @@ export default function ProgrammeAdminPage() {
               ))}
             </ol>
           ) : (
-            <p className="text-[13px] text-muted">{query.isPending ? 'Loading…' : 'Nothing to preview yet.'}</p>
+            <p className="text-[13px] text-muted">{eventId && query.isPending ? 'Loading…' : 'Nothing to preview yet.'}</p>
           )}
         </Panel>
       </div>
 
-      {dialog && <ProgrammeItemDialog item={dialog.item} onClose={() => setDialog(null)} />}
+      {dialog && eventId && (
+        <ProgrammeItemDialog
+          item={dialog.item}
+          eventId={eventId}
+          eventName={multiple ? event?.name : undefined}
+          eventDay={eventDay}
+          onClose={() => setDialog(null)}
+        />
+      )}
 
       <Confirm
         open={!!deleting}

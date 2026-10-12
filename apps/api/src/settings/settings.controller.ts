@@ -84,14 +84,14 @@ export class SettingsController {
 
   @Get('upload-qr.pdf')
   async qrPdf(@Res() res: Response): Promise<void> {
-    const [settings, event, celebrant] = await Promise.all([
+    const [settings, celebration, celebrant] = await Promise.all([
       this.settings.getSettings(),
-      this.settings.getEvent(),
+      this.settings.getCelebration(),
       this.prisma.celebrant.findUnique({ where: { id: 1 } }),
     ]);
     const pdf = await this.qr.uploadPosterPdf({
       celebrantName: celebrant?.fullName ?? '',
-      eventName: event.name,
+      eventName: celebration.name,
       url: this.settings.uploadUrl(settings.uploadToken),
     });
     res.type('application/pdf').setHeader('Cache-Control', 'private, no-store');

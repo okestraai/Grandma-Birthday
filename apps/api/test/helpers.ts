@@ -38,7 +38,7 @@ export async function resetDb(ctx: TestContext): Promise<void> {
   await ctx.app.get(SettingsService).ensureDefaults();
   // The truncate bypasses HTTP, so nothing else clears cached public responses.
   ctx.app.get(PublicCache).clear();
-  await ctx.prisma.event.update({ where: { id: 1 }, data: { rsvpOpen: true, capacity: 100 } });
+  await ctx.prisma.celebration.update({ where: { id: 1 }, data: { rsvpOpen: true, capacity: 100 } });
   passwordHash ??= hashPassword(PASSWORD);
   const hash = await passwordHash;
   await ctx.prisma.user.createMany({

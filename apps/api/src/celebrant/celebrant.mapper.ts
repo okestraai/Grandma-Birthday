@@ -2,7 +2,7 @@ import type { AdminCelebrant, Celebrant as CelebrantDto } from '@birthday/types'
 import type { Celebrant } from '../generated/prisma/client';
 import { publicMediaOrNull, type PublicMediaRow } from '../media/media.mapper';
 
-/** Age reached on the event date (e.g. 70). */
+/** Age reached on the date of the first event (e.g. 70). */
 export function ageAt(birthDate: Date | null, on: Date): number | null {
   if (!birthDate) return null;
   let age = on.getUTCFullYear() - birthDate.getUTCFullYear();

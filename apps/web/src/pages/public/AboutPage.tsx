@@ -5,6 +5,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { ErrorState } from '@/components/ui/states';
 import { celebrantName, siteNameOf, useSite } from '@/lib/public-api';
 import { formatEventDate, paragraphs } from '@/lib/utils';
+import { celebrationDates } from '@/components/public/event/event-helpers';
 import { MediaImage, mediaSrc } from '@/components/public/media';
 import { Reveal } from '@/components/public/reveal';
 import { Eyebrow, GoldRule, PageHero } from '@/components/public/section';
@@ -103,7 +104,7 @@ export default function AboutPage() {
                   <div className="flex justify-between gap-4 py-3">
                     <dt className="text-muted">Celebrating</dt>
                     <dd className="text-right text-navy">
-                      <time dateTime={site.event.startsAt}>{formatEventDate(site.event.startsAt, site.event.timezone)}</time>
+                      <time dateTime={site.celebration.startsAt}>{celebrationDates(site)}</time>
                     </dd>
                   </div>
                   {celebrant.age != null && (

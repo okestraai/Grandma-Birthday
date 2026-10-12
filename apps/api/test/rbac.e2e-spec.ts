@@ -12,7 +12,8 @@ describe('Authorization (e2e)', () => {
     '/api/admin/dashboard',
     '/api/admin/guests',
     '/api/admin/settings',
-    '/api/admin/event',
+    '/api/admin/celebration',
+    '/api/admin/events',
     '/api/admin/media',
     '/api/admin/testimonials',
     '/api/admin/storage',
@@ -34,9 +35,9 @@ describe('Authorization (e2e)', () => {
       const res = await agent.get(route);
       expect([route, res.status]).toEqual([route, 403]);
     }
-    await agent.put('/api/admin/event').set('X-CSRF-Token', csrf).send({ capacity: 1 }).expect(403);
+    await agent.put('/api/admin/celebration').set('X-CSRF-Token', csrf).send({ capacity: 1 }).expect(403);
     await agent.get('/api/checkin/recent').expect(200);
-    expect((await ctx.prisma.event.findUniqueOrThrow({ where: { id: 1 } })).capacity).toBe(100);
+    expect((await ctx.prisma.celebration.findUniqueOrThrow({ where: { id: 1 } })).capacity).toBe(100);
   });
 
   it('reserves user management for super admins', async () => {
@@ -64,7 +65,7 @@ describe('Authorization (e2e)', () => {
 
   it('rejects unknown fields and malformed ids', async () => {
     const { agent, csrf } = await login(ctx, 'admin@test.local');
-    const res = await agent.put('/api/admin/event').set('X-CSRF-Token', csrf).send({ capacity: 5, isAdmin: true }).expect(400);
+    const res = await agent.put('/api/admin/celebration').set('X-CSRF-Token', csrf).send({ capacity: 5, isAdmin: true }).expect(400);
     expect(res.body.code).toBe('VALIDATION_FAILED');
     await agent.get('/api/admin/guests/not-a-uuid').expect(400);
     await agent.get('/api/admin/guests/00000000-0000-4000-8000-000000000000').expect(404);

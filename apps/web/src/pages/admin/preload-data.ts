@@ -17,13 +17,15 @@ import {
   checkinListQuery,
   checkinOverviewQuery,
   dashboardQuery,
-  eventQuery,
+  celebrationQuery,
+  eventsQuery,
   familyQuery,
   guestListParams,
   guestListQuery,
   invitationListQuery,
   mediaListQuery,
   mediaStatsQuery,
+  programmeEventId,
   programmeQuery,
   questionsQuery,
   settingsQuery,
@@ -58,12 +60,14 @@ const pageData: Partial<Record<keyof typeof adminPages, (search: URLSearchParams
   media: () => [albumsQuery, settingsQuery, mediaListQuery({ ...DEFAULT_MEDIA_PARAMS })],
   'guest-photos': () => [mediaStatsQuery, mediaListQuery({ ...DEFAULT_GUEST_PHOTO_PARAMS })],
   testimonials: (search) => [testimonialListQuery(testimonialListParams(search)), testimonialCountsQuery],
-  guests: (search) => [categoriesQuery, guestListQuery(guestListParams(search))],
+  guests: (search) => [categoriesQuery, eventsQuery, guestListQuery(guestListParams(search))],
   'guest-categories': () => [categoriesQuery, questionsQuery],
-  invitations: () => [invitationListQuery(DEFAULT_INVITATION_PARAMS), checkinListQuery(DEFAULT_CHECKIN_LIST_PARAMS)],
-  'check-in': () => [checkinOverviewQuery],
-  event: () => [eventQuery, allocationsQuery],
-  programme: () => [programmeQuery],
+  invitations: () => [invitationListQuery(DEFAULT_INVITATION_PARAMS), checkinListQuery(DEFAULT_CHECKIN_LIST_PARAMS), eventsQuery],
+  // Without an eventId: the page first asks which event the server picks, then follows the saved choice.
+  'check-in': () => [checkinOverviewQuery()],
+  event: () => [celebrationQuery, eventsQuery, allocationsQuery, categoriesQuery],
+  // The event's programme follows once events arrive; see `thenData`.
+  programme: () => [eventsQuery, celebrationQuery],
   storage: () => [storageQuery],
   users: () => [usersQuery],
   'audit-logs': (search) => [auditQuery(auditParams(search))],
@@ -73,13 +77,19 @@ const pageData: Partial<Record<keyof typeof adminPages, (search: URLSearchParams
 /**
  * Requests that depend on an earlier answer, run as soon as it arrives. The gallery shows the
  * album in the URL or, failing that, the first album, so it can only ask for media once the
- * album list is in. The page does the same wait; this just starts it before the page loads.
+ * album list is in. The programme page does the same with events. The page does the same wait;
+ * this just starts it before the page loads.
  */
 const thenData: Partial<Record<keyof typeof adminPages, (client: QueryClient, search: URLSearchParams) => Promise<void>>> = {
   gallery: async (client, search) => {
     await prefetch(client, albumsQuery);
     const albumId = galleryAlbumId(client.getQueryData(albumsQuery.queryKey), search.get('album'));
     if (albumId) await prefetch(client, albumMediaQuery(albumId));
+  },
+  programme: async (client, search) => {
+    await prefetch(client, eventsQuery);
+    const eventId = programmeEventId(client.getQueryData(eventsQuery.queryKey), search.get('event'));
+    if (eventId) await prefetch(client, programmeQuery(eventId));
   },
 };
 

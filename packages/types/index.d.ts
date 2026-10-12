@@ -54,6 +54,7 @@ export type ApiErrorCode =
   | 'RSVP_ALREADY_EXISTS'
   | 'COMPANION_LIMIT_EXCEEDED'
   | 'EVENT_CAPACITY_REACHED'
+  | 'EVENT_FULL'
   | 'CATEGORY_CAPACITY_REACHED'
   | 'INVITATION_NOT_FOUND'
   | 'INVITATION_REVOKED'
@@ -83,6 +84,13 @@ export interface ApiErrorBody {
 export type UserRole = 'SUPER_ADMIN' | 'ADMIN' | 'CHECK_IN_STAFF';
 export type UserStatus = 'ACTIVE' | 'DISABLED';
 export type RsvpMode = 'OPEN' | 'INVITE_ONLY';
+/**
+ * PER_EVENT: guests tick the events they will attend, with companions per event.
+ * WHOLE_CELEBRATION: one yes or no and one companion count, covering every event the guest may attend.
+ */
+export type RsvpScope = 'PER_EVENT' | 'WHOLE_CELEBRATION';
+/** PER_EVENT: one check-in per guest per event. ONCE: one check-in covers the whole celebration. */
+export type CheckInScope = 'PER_EVENT' | 'ONCE';
 export type TimelineCategory =
   | 'BIRTH'
   | 'EDUCATION'
@@ -161,33 +169,55 @@ export interface AdminMedia extends PublicMedia {
 // Public site
 // ---------------------------------------------------------------------------
 
-export interface PublicEvent {
+/**
+ * The celebration as a whole. Dates and venues belong to its events (`SiteOverview.events`).
+ * `startsAt` and `endsAt` span the public events (all events when none is public).
+ */
+export interface PublicCelebration {
   name: string;
   tagline: string | null;
   description: string | null;
+  timezone: string;
   startsAt: ISODateString;
   endsAt: ISODateString;
-  timezone: string;
-  venueName: string;
-  address: string;
-  city: string | null;
-  mapUrl: string | null;
-  latitude: number | null;
-  longitude: number | null;
-  theme: string | null;
-  dressCode: string | null;
-  parkingInfo: string | null;
   contactName: string | null;
   contactEmail: string | null;
   contactPhone: string | null;
   rsvp: RsvpAvailability;
 }
 
+/** One gathering within the celebration, such as a church service, a dinner or a brunch. */
+export interface PublicEvent {
+  id: UUID;
+  slug: string;
+  name: string;
+  description: string | null;
+  startsAt: ISODateString;
+  endsAt: ISODateString;
+  venueName: string;
+  address: string;
+  city: string | null;
+  mapUrl: string | null;
+  latitude: number | null;
+  longitude: number | null;
+  dressCode: string | null;
+  theme: string | null;
+  parkingInfo: string | null;
+  /** False for information-only events: guests do not reply to them. */
+  rsvpEnabled: boolean;
+  /** Names of the guest categories invited. Empty = everyone. */
+  invitedCategories: string[];
+  sortOrder: number;
+}
+
 export interface RsvpAvailability {
   open: boolean;
   mode: RsvpMode;
   deadline: ISODateString | null;
-  /** Present when `open` is false. */
+  /**
+   * Present when `open` is false. CAPACITY_REACHED: the celebration, or every event guests reply to,
+   * is full. EVENT_ENDED: the last event has ended.
+   */
   closedReason: 'CLOSED_BY_ADMIN' | 'DEADLINE_PASSED' | 'CAPACITY_REACHED' | 'EVENT_ENDED' | null;
 }
 
@@ -197,7 +227,7 @@ export interface Celebrant {
   honorific: string | null;
   birthDate: string | null; // YYYY-MM-DD
   birthPlace: string | null;
-  /** Age being celebrated, computed from birthDate and the event date (e.g. 70). */
+  /** Age being celebrated, computed from birthDate and the first event's date (e.g. 70). */
   age: number | null;
   heroHeadline: string | null;
   introduction: string | null;
@@ -222,7 +252,9 @@ export interface SiteBranding {
 
 /** GET /api/site — everything the home page needs in one request. */
 export interface SiteOverview {
-  event: PublicEvent;
+  celebration: PublicCelebration;
+  /** Public events in display order (sortOrder, then start). Always at least one unless all are private. */
+  events: PublicEvent[];
   celebrant: Celebrant;
   branding: SiteBranding;
   features: {
@@ -285,13 +317,22 @@ export type AlbumDetail = AlbumSummary;
 
 export interface ProgrammeItem {
   id: UUID;
-  startTime: string; // "HH:mm"
+  eventId: UUID;
+  /** YYYY-MM-DD, only for items on another day than the event starts (e.g. after midnight). */
+  date: string | null;
+  startTime: string; // "HH:mm", event-local time
   endTime: string | null;
   title: string;
   description: string | null;
   speaker: string | null;
   location: string | null;
   sortOrder: number;
+}
+
+/** GET /api/programme — public events that have programme items, in display order. */
+export interface ProgrammeGroup {
+  event: PublicEvent;
+  items: ProgrammeItem[];
 }
 
 export interface PublicTestimonial {
@@ -342,13 +383,41 @@ export interface RsvpQuestion {
   sortOrder: number;
 }
 
+/** An event a guest can reply to. */
+export interface RsvpEventOption {
+  id: UUID;
+  slug: string;
+  name: string;
+  startsAt: ISODateString;
+  endsAt: ISODateString;
+  venueName: string;
+  city: string | null;
+  /**
+   * Categories invited to the event. Empty = everyone. In the open form, show the event only
+   * when the guest's chosen category is in this list (or the list is empty).
+   */
+  invitedCategoryIds: UUID[];
+  /** True when the event's own capacity is taken. */
+  full: boolean;
+}
+
+/** One event the guest will attend, and how many of their named companions come to it. */
+export interface RsvpEventChoice {
+  eventId: UUID;
+  companionCount: number;
+}
+
 /** GET /api/rsvp/form */
 export interface RsvpFormConfig {
   availability: RsvpAvailability;
+  /** WHOLE_CELEBRATION: the form does not ask about events; it lists them for information. */
+  rsvpScope: RsvpScope;
   allowCompanions: boolean;
   /** Companion limit for open registration (per category default, capped by this). */
   maxCompanions: number;
   categories: PublicGuestCategory[];
+  /** Public events that take replies and have not ended, in display order. */
+  events: RsvpEventOption[];
   questions: RsvpQuestion[];
   /** Whether guests may add an optional birthday message (tribute) to their RSVP. */
   tributes: { open: boolean; requireApproval: boolean };
@@ -370,9 +439,12 @@ export interface RsvpInvitePrefill {
   phone: string | null;
   categoryName: string | null;
   allowedCompanions: number;
+  /** Exactly the events this guest may reply to (category rules, events an admin added, and events already chosen). */
+  events: RsvpEventOption[];
   existing: {
     response: RsvpResponse;
     companionCount: number;
+    events: RsvpEventChoice[];
     companions: { fullName: string; dietary: string | null }[];
     dietary: string | null;
     accessibility: string | null;
@@ -392,6 +464,12 @@ export interface SubmitRsvpRequest {
   categoryId?: UUID;
   response: RsvpResponse;
   companions: { fullName: string; dietary?: string }[];
+  /**
+   * The events the guest will attend (ATTENDING only). Each companionCount is at most the number of
+   * companions named. Omitted: every event the guest may reply to, with all their companions.
+   * Ignored when the celebration's rsvpScope is WHOLE_CELEBRATION: the guest attends all of them.
+   */
+  events?: RsvpEventChoice[];
   dietary?: string;
   accessibility?: string;
   /** Deprecated: private note stored on the RSVP. Use `tribute` for a birthday message. */
@@ -409,12 +487,33 @@ export interface SubmitRsvpResult {
   invitationCode: string | null;
   guestName: string;
   companionCount: number;
+  /** The events the guest will attend (empty when declining). */
+  events: InvitationEvent[];
   emailSent: boolean;
   /** Moderation status of the birthday message, or null if none was given. */
   tributeStatus: ModerationStatus | null;
 }
 
-/** GET /api/invitations/:token — the digital pass. */
+/** An event on a guest's invitation. */
+export interface InvitationEvent {
+  id: UUID;
+  slug: string;
+  name: string;
+  startsAt: ISODateString;
+  endsAt: ISODateString;
+  venueName: string;
+  address: string;
+  city: string | null;
+  mapUrl: string | null;
+  latitude: number | null;
+  longitude: number | null;
+  dressCode: string | null;
+  /** The guest plus the companions coming to this event. */
+  partySize: number;
+  checkedIn: boolean;
+}
+
+/** GET /api/invitations/:token — the digital pass. One QR code works at every event. */
 export interface DigitalInvitation {
   code: string;
   status: InvitationStatus;
@@ -425,18 +524,18 @@ export interface DigitalInvitation {
   /** Guest plus companions. */
   partySize: number;
   response: RsvpResponse | null;
+  /** Checked in at any event. */
   checkedIn: boolean;
-  event: {
+  celebration: {
     name: string;
     celebrantName: string;
-    startsAt: ISODateString;
-    endsAt: ISODateString;
     timezone: string;
-    venueName: string;
-    address: string;
-    dressCode: string | null;
-    mapUrl: string | null;
   };
+  /**
+   * The guest's events: the ones they chose when attending, every event they are invited to
+   * before they reply, none when they declined.
+   */
+  events: InvitationEvent[];
   /** Relative API paths: `${base}.svg`, `.png`; PDF pass at `pdfUrl`. */
   qrSvgUrl: string;
   qrPngUrl: string;
@@ -524,17 +623,27 @@ export interface ChangePasswordRequest {
 // Check-in
 // ---------------------------------------------------------------------------
 
-/** POST /api/checkin/verify — `value` is a scanned QR (URL or token) or a typed invitation code. */
+/**
+ * POST /api/checkin/verify — `value` is a scanned QR (URL or token) or a typed invitation code.
+ * `eventId` is the event being checked in to; it may be left out when there is one event, and is
+ * ignored with checkInScope ONCE (the check-in is recorded against the event in progress or next).
+ */
 export interface CheckInVerifyRequest {
   value: string;
+  eventId?: UUID;
 }
 
+/**
+ * NOT_FOR_THIS_EVENT: the guest is not invited to this event, or replied without choosing it.
+ * With checkInScope ONCE, ALREADY_CHECKED_IN applies across all events and NOT_FOR_THIS_EVENT is not used.
+ */
 export type CheckInVerifyStatus =
   | 'VALID'
   | 'ALREADY_CHECKED_IN'
   | 'REVOKED'
   | 'EXPIRED'
   | 'NOT_ATTENDING'
+  | 'NOT_FOR_THIS_EVENT'
   | 'INVALID';
 
 export interface CheckInGuestSummary {
@@ -542,14 +651,18 @@ export interface CheckInGuestSummary {
   code: string;
   guestName: string;
   categoryName: string | null;
+  /** People expected at this event: the guest plus the companions coming to it. */
   partySize: number;
   companions: string[];
   dietary: string | null;
   accessibility: string | null;
+  /** The guest's events (chosen, or invited to before replying), so staff can redirect them. */
+  events: { id: UUID; name: string }[];
 }
 
 export interface CheckInVerifyResult {
   status: CheckInVerifyStatus;
+  event: { id: UUID; name: string };
   guest: CheckInGuestSummary | null;
   checkIn: {
     checkedInAt: ISODateString;
@@ -558,9 +671,11 @@ export interface CheckInVerifyResult {
   } | null;
 }
 
-/** POST /api/checkin */
+/** POST /api/checkin — one active check-in per guest per event (409 ALREADY_CHECKED_IN). */
 export interface CheckInRequest {
   invitationId: UUID;
+  /** May be left out only when there is one event. */
+  eventId?: UUID;
   /** Guests arriving now (defaults to the full party). Cannot exceed the party size. */
   partySize?: number;
   deviceInfo?: string;
@@ -569,6 +684,8 @@ export interface CheckInRequest {
 export interface CheckInRecord {
   id: UUID;
   invitationId: UUID;
+  eventId: UUID;
+  eventName: string;
   code: string;
   guestName: string;
   categoryName: string | null;
@@ -580,22 +697,47 @@ export interface CheckInRecord {
   reverseReason: string | null;
 }
 
-/** GET /api/checkin/recent */
+/** Check-in counts for one event. */
+export interface CheckInEventCount {
+  eventId: UUID;
+  name: string;
+  startsAt: ISODateString;
+  endsAt: ISODateString;
+  checkedInGuests: number;
+  checkedInPeople: number;
+  /** People who said they will attend this event. */
+  expectedPeople: number;
+}
+
+/**
+ * GET /api/checkin/recent?eventId= — counts and recent check-ins for one event. Without eventId the
+ * server picks the event in progress, else the next to start, else the last one (`eventId` says which).
+ */
 export interface CheckInOverview {
+  /** ONCE: the counts and recent list cover the whole celebration, and staff do not pick an event. */
+  checkInScope: CheckInScope;
+  eventId: UUID;
+  eventName: string;
   checkedInGuests: number;
   checkedInPeople: number;
   expectedPeople: number;
   recent: CheckInRecord[];
+  /** Every event in time order, for the event picker. */
+  events: CheckInEventCount[];
 }
 
-/** GET /api/checkin/search?q= — for manual lookup when a QR code will not scan. */
+/** GET /api/checkin/search?q=&eventId= — for manual lookup when a QR code will not scan. */
 export interface CheckInSearchResult {
   invitationId: UUID;
   code: string;
   guestName: string;
   categoryName: string | null;
+  /** People expected at the chosen event (0 when not coming to it). */
   partySize: number;
+  /** Checked in to the chosen event. */
   checkedIn: boolean;
+  /** Invited to (or attending) the chosen event. */
+  forThisEvent: boolean;
   status: InvitationStatus;
 }
 
@@ -625,6 +767,7 @@ export interface StorageDetail extends StorageSummary {
 
 /** GET /api/admin/dashboard */
 export interface DashboardStats {
+  checkInScope: CheckInScope;
   totalInvitations: number;
   activeInvitations: number;
   registeredGuests: number;
@@ -638,17 +781,34 @@ export interface DashboardStats {
   pendingTestimonials: number;
   pendingPhotos: number;
   storage: StorageSummary;
+  /** Replies and check-ins per event, in time order. */
+  events: DashboardEventStats[];
   rsvpsByDay: { date: string; count: number }[];
   guestsByCategory: { categoryName: string; guests: number; people: number }[];
   guestPhotoCounts: { pending: number; approved: number; rejected: number };
   recentActivity: AuditLogEntry[];
 }
 
+export interface DashboardEventStats {
+  eventId: UUID;
+  name: string;
+  startsAt: ISODateString;
+  /** Null = no limit for this event. */
+  capacity: number | null;
+  attendingGuests: number;
+  attendingPeople: number;
+  checkedInGuests: number;
+  checkedInPeople: number;
+}
+
 // ---------------------------------------------------------------------------
-// Admin: event, settings, programme
+// Admin: celebration, events, settings, programme
 // ---------------------------------------------------------------------------
 
-export interface AdminEvent extends Omit<PublicEvent, 'rsvp'> {
+/** GET /api/admin/celebration — celebration-wide settings. Capacity counts each person once, whatever events they attend. */
+export interface AdminCelebration extends Omit<PublicCelebration, 'rsvp'> {
+  rsvpScope: RsvpScope;
+  checkInScope: CheckInScope;
   capacity: number;
   rsvpOpen: boolean;
   rsvpMode: RsvpMode;
@@ -661,8 +821,48 @@ export interface AdminEvent extends Omit<PublicEvent, 'rsvp'> {
   updatedAt: ISODateString;
 }
 
+/** GET /api/admin/events — one event with its replies. */
+export interface AdminEvent extends PublicEvent {
+  isPublic: boolean;
+  /** People attending this event at most; null = only the celebration capacity applies. */
+  capacity: number | null;
+  invitedCategoryIds: UUID[];
+  attendingGuests: number;
+  attendingPeople: number;
+  /** Null when the event has no capacity of its own. */
+  capacityRemaining: number | null;
+  checkedInPeople: number;
+  programmeCount: number;
+  updatedAt: ISODateString;
+}
+
+/** POST /api/admin/events, PUT /api/admin/events/:id */
+export interface UpsertEventRequest {
+  name: string;
+  /** Lower-case letters, digits and hyphens. Made from the name when left out. */
+  slug?: string;
+  description?: string | null;
+  startsAt: ISODateString;
+  endsAt: ISODateString;
+  venueName: string;
+  address: string;
+  city?: string | null;
+  mapUrl?: string | null;
+  latitude?: number | null;
+  longitude?: number | null;
+  dressCode?: string | null;
+  theme?: string | null;
+  parkingInfo?: string | null;
+  capacity?: number | null;
+  /** Empty = everyone is invited. */
+  invitedCategoryIds?: UUID[];
+  rsvpEnabled?: boolean;
+  isPublic?: boolean;
+  sortOrder?: number;
+}
+
 /**
- * GET /api/admin/event/allocations — how the event capacity is split across guest categories.
+ * GET /api/admin/celebration/allocations — how the celebration capacity is split across guest categories.
  * PUT with `UpdateCapacityAllocationsRequest` sets every category's share in one go.
  */
 export interface CapacityAllocations {
@@ -670,7 +870,7 @@ export interface CapacityAllocations {
   confirmedPeople: number;
   /** Sum of the category capacities that are set. */
   allocated: number;
-  /** Event capacity not set aside for any category (open to guests without a limited category). */
+  /** Celebration capacity not set aside for any category (open to guests without a limited category). */
   unallocated: number;
   categories: {
     categoryId: UUID;
@@ -689,9 +889,9 @@ export interface UpdateCapacityAllocationsRequest {
   allocations: { categoryId: UUID; capacity: number | null }[];
 }
 
-/** PUT /api/admin/event — all fields optional; nullable strings accept null to clear. */
-export type UpdateEventRequest = Partial<
-  Omit<AdminEvent, 'confirmedPeople' | 'capacityRemaining' | 'updatedAt'>
+/** PUT /api/admin/celebration — all fields optional; nullable strings accept null to clear. */
+export type UpdateCelebrationRequest = Partial<
+  Omit<AdminCelebration, 'confirmedPeople' | 'capacityRemaining' | 'updatedAt' | 'startsAt' | 'endsAt'>
 >;
 
 export interface AdminSettings {
@@ -740,7 +940,9 @@ export type UpdateSettingsRequest = Partial<
   >
 >;
 
-export type UpsertProgrammeItemRequest = Omit<ProgrammeItem, 'id' | 'sortOrder'> & {
+/** POST /api/admin/events/:eventId/programme, PUT /api/admin/events/:eventId/programme/:id */
+export type UpsertProgrammeItemRequest = Omit<ProgrammeItem, 'id' | 'eventId' | 'sortOrder' | 'date'> & {
+  date?: string | null;
   sortOrder?: number;
 };
 
@@ -950,7 +1152,7 @@ export interface GuestCategory extends PublicGuestCategory {
   color: string | null;
   sortOrder: number;
   guestCount: number;
-  /** Places allocated to this category out of the event capacity; null = no separate limit. */
+  /** Places allocated to this category out of the celebration capacity; null = no separate limit. */
   capacity: number | null;
   /** Attending guests in this category plus their companions. */
   confirmedPeople: number;
@@ -986,7 +1188,10 @@ export type GuestSort = 'newest' | 'oldest' | 'name' | '-name';
 export type GuestRsvpFilter = 'ATTENDING' | 'DECLINED' | 'NONE';
 export type GuestCheckInFilter = 'IN' | 'OUT';
 
-/** Row in GET /api/admin/guests?q=&categoryId=&rsvp=&checkIn=&from=&to=&page=&pageSize=&sort= */
+/**
+ * Row in GET /api/admin/guests?q=&categoryId=&eventId=&rsvp=&checkIn=&from=&to=&page=&pageSize=&sort=
+ * With eventId, only guests attending that event are listed, and checkIn refers to that event.
+ */
 export interface AdminGuestListItem {
   id: UUID;
   fullName: string;
@@ -999,18 +1204,25 @@ export interface AdminGuestListItem {
   rsvpResponse: RsvpResponse | null;
   companionCount: number;
   partySize: number;
+  /** Events the guest will attend (attending guests only). */
+  events: { eventId: UUID; companionCount: number; checkedIn: boolean }[];
   invitation: {
     id: UUID;
     code: string;
     status: InvitationStatus;
     lastSentAt: ISODateString | null;
   } | null;
+  /** Latest active check-in at any event. */
   checkedInAt: ISODateString | null;
   createdAt: ISODateString;
 }
 
 export interface AdminGuestDetail extends AdminGuestListItem {
   notes: string | null;
+  /** Every event this guest may attend: by category, added by an admin, or already chosen. */
+  invitedEventIds: UUID[];
+  /** Events an admin added this guest to beyond their category. */
+  extraEventIds: UUID[];
   rsvp: {
     response: RsvpResponse;
     companions: { id: UUID; fullName: string; dietary: string | null }[];
@@ -1043,16 +1255,20 @@ export interface CreateGuestRequest {
   categoryId?: UUID | null;
   allowedCompanions: number;
   notes?: string | null;
+  /** Events to invite this guest to beyond what their category allows (replaces the list). */
+  extraEventIds?: UUID[];
   /** Send the invitation email now. */
   sendInvitation?: boolean;
   /** Record an RSVP on the guest's behalf. */
   rsvp?: {
     response: RsvpResponse;
     companions: { fullName: string; dietary?: string }[];
+    /** Omitted: the guest's current choices, or every event they may attend. */
+    events?: RsvpEventChoice[];
     dietary?: string;
     accessibility?: string;
   };
-  /** Admins may exceed event capacity deliberately; the override is audited. */
+  /** Admins may exceed the celebration, category and event capacities deliberately; the override is audited. */
   overrideCapacity?: boolean;
 }
 

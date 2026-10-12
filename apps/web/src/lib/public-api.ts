@@ -5,7 +5,7 @@ import type {
   DigitalInvitation,
   FamilyTree,
   Paginated,
-  ProgrammeItem,
+  ProgrammeGroup,
   PublicMedia,
   PublicTestimonial,
   RsvpFormConfig,
@@ -98,7 +98,7 @@ export function useAlbumMedia(slug: string, enabled = true) {
 export function useProgramme() {
   return useQuery({
     queryKey: publicKeys.programme,
-    queryFn: (ctx) => withDemoFallback(ctx, () => api.get<ProgrammeItem[]>('/programme', undefined, ctx.signal)),
+    queryFn: (ctx) => withDemoFallback(ctx, () => api.get<ProgrammeGroup[]>('/programme', undefined, ctx.signal)),
   });
 }
 
@@ -153,7 +153,7 @@ export function useUploadConfig(token: string) {
 /** Name used in page titles, e.g. "Dr. Margaret's 70th". */
 export function siteNameOf(site: SiteOverview | undefined): string {
   if (!site) return '';
-  return site.branding.siteTitle ?? site.event.name;
+  return site.branding.siteTitle ?? site.celebration.name;
 }
 
 /** Celebrant display name with honorific, e.g. "Dr. Margaret Adaeze Okonkwo". */

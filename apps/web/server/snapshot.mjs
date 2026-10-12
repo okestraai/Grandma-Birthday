@@ -24,6 +24,8 @@ export const SNAPSHOT_SOURCES = [
 ];
 
 const FILE_NAME = 'public-snapshot.json';
+/** Bumped when the saved data changes shape; keep in step with src/lib/snapshot.ts. Older files are ignored. */
+export const SNAPSHOT_VERSION = 2;
 /** Larger than this and the snapshot is left out of pages rather than slowing them down. */
 export const MAX_INJECT_BYTES = 1_500_000;
 
@@ -60,12 +62,12 @@ export function createSnapshotStore({ apiOrigin, dir, timeoutMs = 3000, refreshM
   let lastAttempt = 0;
   let timer = null;
 
-  const snapshot = () => ({ v: 1, entries: [...entries.values()] });
+  const snapshot = () => ({ v: SNAPSHOT_VERSION, entries: [...entries.values()] });
 
   async function load() {
     try {
       const parsed = JSON.parse(await readFile(file, 'utf8'));
-      if (parsed?.v !== 1 || !Array.isArray(parsed.entries)) return;
+      if (parsed?.v !== SNAPSHOT_VERSION || !Array.isArray(parsed.entries)) return;
       const allowed = new Set(SNAPSHOT_SOURCES.map((s) => JSON.stringify(s.key)));
       for (const entry of parsed.entries) {
         const id = JSON.stringify(entry?.key);

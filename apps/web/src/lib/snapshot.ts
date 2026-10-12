@@ -15,7 +15,13 @@ import { isDemoData } from './demo-fallback';
  * invitations, upload links), all admin data and sample data (lib/demo-fallback.ts) are never stored.
  */
 
-export const SNAPSHOT_STORAGE_KEY = 'bp_public_snapshot_v1';
+/**
+ * Bumped when the shape of the saved data changes, so an old copy is never read as new data.
+ * Version 2: the site has a celebration and several events (`site.event` became `site.celebration` and `site.events`).
+ * Keep in step with server/snapshot.mjs.
+ */
+export const SNAPSHOT_VERSION = 2;
+export const SNAPSHOT_STORAGE_KEY = 'bp_public_snapshot_v2';
 export const SNAPSHOT_MAX_BYTES = 1_500_000;
 export const SNAPSHOT_MAX_AGE_MS = 30 * 24 * 60 * 60_000;
 const WRITE_THROTTLE_MS = 2_000;
@@ -31,7 +37,7 @@ export interface SnapshotEntry {
 }
 
 export interface Snapshot {
-  v: 1;
+  v: typeof SNAPSHOT_VERSION;
   entries: SnapshotEntry[];
 }
 
@@ -50,7 +56,7 @@ export function parseSnapshot(text: string | null | undefined, now = Date.now())
   if (!text) return [];
   try {
     const parsed = JSON.parse(text) as Partial<Snapshot> | null;
-    if (!parsed || parsed.v !== 1 || !Array.isArray(parsed.entries)) return [];
+    if (!parsed || parsed.v !== SNAPSHOT_VERSION || !Array.isArray(parsed.entries)) return [];
     return parsed.entries.filter((e): e is SnapshotEntry => isEntry(e) && isSnapshotKey(e.key) && now - e.updatedAt <= SNAPSHOT_MAX_AGE_MS);
   } catch {
     return [];
@@ -119,7 +125,7 @@ export function buildSnapshot(client: QueryClient, previous: SnapshotEntry[], no
     current.push({ key: query.queryKey, data: trimmed(data), updatedAt: dataUpdatedAt });
   }
   const entries = newestPerKey(previous, current).filter((e) => now - e.updatedAt <= SNAPSHOT_MAX_AGE_MS);
-  return { v: 1, entries };
+  return { v: SNAPSHOT_VERSION, entries };
 }
 
 /** Writes the snapshot; skipped when it would be too large. Returns whether it was written. */
@@ -157,5 +163,11 @@ export function persistPublicQueries(client: QueryClient, throttleMs = WRITE_THR
 /** Called once from main.tsx before the first render. Admin pages are left untouched. */
 export function restorePublicSnapshot(client: QueryClient, pathname: string): void {
   if (pathname.startsWith('/admin')) return;
+  try {
+    // The copy saved before version 2 can never be read again.
+    window.localStorage.removeItem('bp_public_snapshot_v1');
+  } catch {
+    // Storage blocked: nothing to tidy.
+  }
   seedQueryClient(client, newestPerKey(readStoredSnapshot(), readInjectedSnapshot()));
 }

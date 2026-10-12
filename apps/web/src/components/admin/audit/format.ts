@@ -70,8 +70,10 @@ function rawTarget({ action, entityType, entityId }: Pick<AuditLogEntry, 'action
       return { to: '/admin/guest-photos', label: 'Open guest photos', permission: 'media:manage' };
     case 'Album':
       return { to: '/admin/albums', label: 'Open albums', permission: 'media:manage' };
+    // Old celebration-settings rows have entityType 'Event' and entityId '1'.
     case 'Event':
-      return { to: '/admin/event', label: 'Open event', permission: 'event:manage' };
+    case 'Celebration':
+      return { to: '/admin/event', label: 'Open events', permission: 'event:manage' };
     case 'Settings':
       return { to: '/admin/settings', label: 'Open settings', permission: 'settings:manage' };
     case 'Celebrant':

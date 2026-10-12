@@ -12,16 +12,19 @@ const guest: CheckInGuestSummary = {
   companions: ['Chidi Okafor'],
   dietary: 'Vegetarian',
   accessibility: 'Wheelchair access',
+  events: [{ id: 'e1', name: 'Thanksgiving Service' }],
 };
 
+const event = { id: 'e1', name: 'Thanksgiving Service' };
+
 function resultView(result: Partial<CheckInVerifyResult> & Pick<CheckInVerifyResult, 'status'>): CheckInView {
-  return { kind: 'result', result: { guest: null, checkIn: null, ...result } };
+  return { kind: 'result', result: { guest: null, checkIn: null, event, ...result } };
 }
 
-function renderCard(view: CheckInView) {
+function renderCard(view: CheckInView, showEvent = false) {
   const onCheckIn = vi.fn();
   const onReset = vi.fn();
-  render(<CheckInResultCard view={view} onCheckIn={onCheckIn} onReset={onReset} />);
+  render(<CheckInResultCard view={view} onCheckIn={onCheckIn} onReset={onReset} showEvent={showEvent} />);
   return { onCheckIn, onReset };
 }
 
@@ -79,6 +82,8 @@ describe('CheckInResultCard', () => {
       record: {
         id: 'c1',
         invitationId: 'inv-1',
+        eventId: 'e1',
+        eventName: 'Thanksgiving Service',
         code: guest.code,
         guestName: guest.guestName,
         categoryName: 'Family',
@@ -92,6 +97,27 @@ describe('CheckInResultCard', () => {
     });
     expect(screen.getByRole('heading', { name: 'Check-In Complete' })).toBeInTheDocument();
     expect(screen.getByText(/2 Guests admitted at 7:05\sPM/)).toBeInTheDocument();
+  });
+
+  it('blocks a guest who is not on the list for this event and names their events', () => {
+    const dinnerGuest = { ...guest, events: [{ id: 'e2', name: 'Birthday Dinner' }, { id: 'e3', name: 'Family Brunch' }] };
+    renderCard(resultView({ status: 'NOT_FOR_THIS_EVENT', guest: dinnerGuest }), true);
+    expect(screen.getByRole('heading', { name: 'Not For This Event' })).toBeInTheDocument();
+    expect(screen.getByText('Not on the list for Thanksgiving Service.')).toBeInTheDocument();
+    expect(screen.getByText('Birthday Dinner')).toBeInTheDocument();
+    expect(screen.getByText('Family Brunch')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /^check in/i })).not.toBeInTheDocument();
+    expect(announcementFor(resultView({ status: 'NOT_FOR_THIS_EVENT', guest: dinnerGuest }))).toBe(
+      'Not For This Event. Adaeze Okafor is not on the list for Thanksgiving Service.',
+    );
+  });
+
+  it('names the event a result is for only when there are several', () => {
+    const { unmount } = render(<CheckInResultCard view={resultView({ status: 'VALID', guest })} onCheckIn={vi.fn()} onReset={vi.fn()} />);
+    expect(screen.queryByText('Thanksgiving Service')).not.toBeInTheDocument();
+    unmount();
+    renderCard(resultView({ status: 'VALID', guest }), true);
+    expect(screen.getByText('Thanksgiving Service')).toBeInTheDocument();
   });
 
   it('shows a progress state while verifying', () => {

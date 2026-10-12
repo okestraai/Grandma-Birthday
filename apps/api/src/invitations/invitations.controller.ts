@@ -7,7 +7,7 @@ import { Public } from '../common/decorators/auth.decorators';
 import { QrService } from '../qr/qr.service';
 import { SettingsService } from '../settings/settings.service';
 import { PrismaService } from '../prisma/prisma.service';
-import { formatEventDate, formatEventTime, InvitationsService } from './invitations.service';
+import { eventLines, InvitationsService } from './invitations.service';
 
 /**
  * Public, token-addressed invitation pages. The token is 256 bits of randomness, so these
@@ -51,17 +51,17 @@ export class InvitationsController {
   @Get('pass.pdf')
   async pdf(@Param('token') token: string, @Res() res: Response): Promise<void> {
     const invitation = await this.invitations.findByToken(token);
-    const [event, celebrant] = await Promise.all([this.settings.getEvent(), this.prisma.celebrant.findUniqueOrThrow({ where: { id: 1 } })]);
+    const [celebration, celebrant, guestEvents] = await Promise.all([
+      this.settings.getCelebration(),
+      this.prisma.celebrant.findUniqueOrThrow({ where: { id: 1 } }),
+      this.invitations.guestEvents(invitation),
+    ]);
     const rsvp = invitation.guest.rsvp;
     const pdf = await this.qr.invitationPdf({
       celebrantName: celebrant.fullName,
-      eventName: event.name,
+      eventName: celebration.name,
       guestName: invitation.guest.fullName,
-      dateText: formatEventDate(event.startsAt, event.timezone),
-      timeText: formatEventTime(event.startsAt, event.endsAt, event.timezone),
-      venue: event.venueName,
-      address: event.address,
-      dressCode: event.dressCode,
+      events: guestEvents.map((g) => eventLines(g.event, celebration.timezone)),
       partySize: rsvp?.response === 'ATTENDING' ? 1 + rsvp.companionCount : 1 + invitation.guest.allowedCompanions,
       companions: rsvp?.companions.map((c) => c.fullName) ?? [],
       code: invitation.code,

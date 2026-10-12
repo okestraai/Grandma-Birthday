@@ -1,13 +1,13 @@
 import type { ReactNode } from 'react';
 import { Link } from 'react-router';
 import { Mail, Phone } from 'lucide-react';
-import type { PublicEvent, RsvpAvailability } from '@birthday/types';
+import type { RsvpAvailability } from '@birthday/types';
 import { Button } from '@/components/ui/button';
-import { rsvpClosedMessage } from '../event/event-helpers';
+import { rsvpClosedMessage, type CelebrationContact } from '../event/event-helpers';
 import { GoldRule } from '../section';
 import { RsvpCard, StepHeading } from './parts';
 
-type Contact = Pick<PublicEvent, 'contactName' | 'contactEmail' | 'contactPhone'>;
+type Contact = CelebrationContact;
 
 /** "Questions? Contact …" block, only when the event has a contact. */
 export function EventContact({ event }: { event?: Contact | null }) {

@@ -1,21 +1,22 @@
 import { Body, Controller, Get, Put, Req } from '@nestjs/common';
 import { ApiCookieAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
-import type { AdminEvent, CapacityAllocations, PublicEvent, SiteOverview } from '@birthday/types';
+import type { AdminCelebration, CapacityAllocations, PublicCelebration, SiteOverview } from '@birthday/types';
 import { Public, RequirePermissions } from '../common/decorators/auth.decorators';
 import { PublicCacheHeaders } from '../common/decorators/cache.decorators';
 import { Errors } from '../common/errors';
 import { PublicCache } from '../common/public-cache';
 import { requestMeta, type RequestWithUser } from '../common/request-context';
-import type { Event } from '../generated/prisma/client';
+import type { Celebration } from '../generated/prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { AuditService } from '../audit/audit.service';
 import { SettingsService } from '../settings/settings.service';
+import { EventsService, spanOf, toPublicEvent, withFull, type EventRow } from '../events/events.service';
 import { PUBLIC_MEDIA_SELECT, publicMediaOrNull } from '../media/media.mapper';
 import { toPublicCelebrant } from '../celebrant/celebrant.mapper';
-import { UpdateAllocationsDto, UpdateEventDto } from './event.dto';
+import { UpdateAllocationsDto, UpdateCelebrationDto } from './celebration.dto';
 import { AppException } from '../common/errors';
 
-function isValidTimeZone(zone: string): boolean {
+export function isValidTimeZone(zone: string): boolean {
   try {
     new Intl.DateTimeFormat('en', { timeZone: zone });
     return true;
@@ -24,12 +25,13 @@ function isValidTimeZone(zone: string): boolean {
   }
 }
 
-@ApiTags('Public: site & event')
+@ApiTags('Public: site & celebration')
 @Controller()
-export class EventController {
+export class CelebrationController {
   constructor(
     private readonly prisma: PrismaService,
     private readonly settings: SettingsService,
+    private readonly events: EventsService,
     private readonly audit: AuditService,
     private readonly cache: PublicCache,
   ) {}
@@ -37,20 +39,20 @@ export class EventController {
   @Get('site')
   @Public()
   @PublicCacheHeaders()
-  @ApiOperation({ summary: 'Everything the home page needs: event, celebrant, branding, feature flags' })
+  @ApiOperation({ summary: 'Everything the home page needs: celebration, public events, celebrant, branding, feature flags' })
   site(): Promise<SiteOverview> {
     return this.cache.remember('site', () => this.loadSite());
   }
 
-  @Get('event')
+  @Get('celebration')
   @Public()
   @PublicCacheHeaders()
-  publicEvent(): Promise<PublicEvent> {
-    return this.loadPublic();
+  async publicCelebration(): Promise<PublicCelebration> {
+    return (await this.loadPublic()).celebration;
   }
 
   private async loadSite(): Promise<SiteOverview> {
-    const [event, s, celebrant] = await Promise.all([
+    const [{ celebration, publicEvents, firstStart }, s, celebrant] = await Promise.all([
       this.loadPublic(),
       this.prisma.settings.findUniqueOrThrow({
         where: { id: 1 },
@@ -59,8 +61,9 @@ export class EventController {
       this.prisma.celebrant.findUniqueOrThrow({ where: { id: 1 }, include: { portraitMedia: { select: PUBLIC_MEDIA_SELECT } } }),
     ]);
     return {
-      event,
-      celebrant: toPublicCelebrant(celebrant, new Date(event.startsAt)),
+      celebration,
+      events: publicEvents.map(toPublicEvent),
+      celebrant: toPublicCelebrant(celebrant, firstStart),
       branding: {
         siteTitle: s.siteTitle,
         siteDescription: s.siteDescription,
@@ -79,23 +82,19 @@ export class EventController {
     };
   }
 
-  @Get('admin/event')
+  @Get('admin/celebration')
   @ApiCookieAuth()
   @RequirePermissions('event:manage')
-  async adminEvent(): Promise<AdminEvent> {
-    const event = await this.settings.getEvent();
-    const confirmed = await this.settings.confirmedPeople();
-    return this.toAdmin(event, confirmed);
+  async adminCelebration(): Promise<AdminCelebration> {
+    const [celebration, confirmed, events] = await Promise.all([this.settings.getCelebration(), this.settings.confirmedPeople(), this.events.list()]);
+    return this.toAdmin(celebration, confirmed, events);
   }
 
-  @Put('admin/event')
+  @Put('admin/celebration')
   @ApiCookieAuth()
   @RequirePermissions('event:manage')
-  async update(@Body() dto: UpdateEventDto, @Req() req: RequestWithUser): Promise<AdminEvent> {
-    const current = await this.settings.getEvent();
-    const startsAt = dto.startsAt ? new Date(dto.startsAt) : current.startsAt;
-    const endsAt = dto.endsAt ? new Date(dto.endsAt) : current.endsAt;
-    if (endsAt <= startsAt) throw Errors.validation({ endsAt: ['The end must be after the start.'] });
+  async update(@Body() dto: UpdateCelebrationDto, @Req() req: RequestWithUser): Promise<AdminCelebration> {
+    const current = await this.settings.getCelebration();
     if (dto.timezone && !isValidTimeZone(dto.timezone)) throw Errors.validation({ timezone: ['Use a time zone name such as Africa/Lagos.'] });
     const defaultCompanions = dto.defaultCompanions ?? current.defaultCompanions;
     const maxCompanions = dto.maxCompanions ?? current.maxCompanions;
@@ -111,34 +110,32 @@ export class EventController {
       }
     }
 
-    const updated = await this.prisma.event.update({
+    const updated = await this.prisma.celebration.update({
       where: { id: 1 },
       data: {
         ...dto,
-        startsAt,
-        endsAt,
         rsvpDeadline: dto.rsvpDeadline === undefined ? undefined : dto.rsvpDeadline === null ? null : new Date(dto.rsvpDeadline),
       },
     });
-    await this.audit.record(requestMeta(req), { action: 'ADMIN_CHANGED_EVENT_SETTINGS', entityType: 'Event', entityId: '1', metadata: { fields: Object.keys(dto) } });
-    return this.toAdmin(updated, confirmed);
+    await this.audit.record(requestMeta(req), { action: 'ADMIN_CHANGED_EVENT_SETTINGS', entityType: 'Celebration', entityId: '1', metadata: { fields: Object.keys(dto) } });
+    return this.toAdmin(updated, confirmed, await this.events.list());
   }
 
-  @Get('admin/event/allocations')
+  @Get('admin/celebration/allocations')
   @ApiCookieAuth()
   @RequirePermissions('event:manage')
   async allocations(): Promise<CapacityAllocations> {
-    const [event, categories, byCategory] = await Promise.all([
-      this.settings.getEvent(),
+    const [celebration, categories, byCategory] = await Promise.all([
+      this.settings.getCelebration(),
       this.prisma.guestCategory.findMany({ include: { _count: { select: { guests: true } } }, orderBy: [{ sortOrder: 'asc' }, { name: 'asc' }] }),
       this.settings.confirmedPeopleByCategory(),
     ]);
     const allocated = categories.reduce((sum, c) => sum + (c.capacity ?? 0), 0);
     return {
-      capacity: event.capacity,
+      capacity: celebration.capacity,
       confirmedPeople: [...byCategory.values()].reduce((a, b) => a + b, 0),
       allocated,
-      unallocated: Math.max(0, event.capacity - allocated),
+      unallocated: Math.max(0, celebration.capacity - allocated),
       categories: categories.map((c) => {
         const confirmedPeople = byCategory.get(c.id) ?? 0;
         return {
@@ -155,13 +152,13 @@ export class EventController {
     };
   }
 
-  @Put('admin/event/allocations')
+  @Put('admin/celebration/allocations')
   @ApiCookieAuth()
   @RequirePermissions('event:manage')
-  @ApiOperation({ summary: 'Split the event capacity across guest categories (all categories in one request)' })
+  @ApiOperation({ summary: 'Split the celebration capacity across guest categories (all categories in one request)' })
   async updateAllocations(@Body() dto: UpdateAllocationsDto, @Req() req: RequestWithUser): Promise<CapacityAllocations> {
-    const [event, categories, byCategory] = await Promise.all([
-      this.settings.getEvent(),
+    const [celebration, categories, byCategory] = await Promise.all([
+      this.settings.getCelebration(),
       this.prisma.guestCategory.findMany(),
       this.settings.confirmedPeopleByCategory(),
     ]);
@@ -181,65 +178,80 @@ export class EventController {
     });
     if (Object.keys(details).length) throw Errors.validation(details);
     const total = [...next.values()].reduce<number>((sum, v) => sum + (v ?? 0), 0);
-    if (total > event.capacity) {
-      throw new AppException(400, 'VALIDATION_FAILED', `The categories add up to ${total} places, but the event capacity is ${event.capacity}.`, {
-        allocations: [`Allocated places (${total}) cannot exceed the event capacity (${event.capacity}).`],
+    if (total > celebration.capacity) {
+      throw new AppException(400, 'VALIDATION_FAILED', `The categories add up to ${total} places, but the celebration capacity is ${celebration.capacity}.`, {
+        allocations: [`Allocated places (${total}) cannot exceed the celebration capacity (${celebration.capacity}).`],
       });
     }
     await this.prisma.$transaction(dto.allocations.map((a) => this.prisma.guestCategory.update({ where: { id: a.categoryId }, data: { capacity: a.capacity } })));
     await this.audit.record(requestMeta(req), {
       action: 'ADMIN_CHANGED_EVENT_SETTINGS',
-      entityType: 'Event',
+      entityType: 'Celebration',
       entityId: '1',
       metadata: { allocations: dto.allocations },
     });
     return this.allocations();
   }
 
-  private async loadPublic(): Promise<PublicEvent> {
-    const event = await this.settings.getEvent();
-    const confirmed = await this.settings.confirmedPeople();
-    return this.toPublic(event, confirmed);
-  }
-
-  private toPublic(e: Event, confirmedPeople: number): PublicEvent {
+  private async loadPublic(): Promise<{ celebration: PublicCelebration; publicEvents: EventRow[]; firstStart: Date }> {
+    const [celebration, confirmed, events, attendance] = await Promise.all([
+      this.settings.getCelebration(),
+      this.settings.confirmedPeople(),
+      this.events.list(),
+      this.events.attendance(),
+    ]);
+    const publicEvents = events.filter((e) => e.isPublic);
     return {
-      name: e.name,
-      tagline: e.tagline,
-      description: e.description,
-      startsAt: e.startsAt.toISOString(),
-      endsAt: e.endsAt.toISOString(),
-      timezone: e.timezone,
-      venueName: e.venueName,
-      address: e.address,
-      city: e.city,
-      mapUrl: e.mapUrl,
-      latitude: e.latitude,
-      longitude: e.longitude,
-      theme: e.theme,
-      dressCode: e.dressCode,
-      parkingInfo: e.parkingInfo,
-      contactName: e.contactName,
-      contactEmail: e.contactEmail,
-      contactPhone: e.contactPhone,
-      rsvp: this.settings.availability(e, confirmedPeople),
+      celebration: this.toPublic(celebration, confirmed, events, withFull(events, attendance)),
+      publicEvents,
+      firstStart: spanOf(events)?.startsAt ?? new Date(),
     };
   }
 
-  private toAdmin(e: Event, confirmedPeople: number): AdminEvent {
-    const { rsvp: _rsvp, ...base } = this.toPublic(e, confirmedPeople);
+  /** The date span shown for the celebration: its public events, or all events when none is public. */
+  private span(events: EventRow[]): { startsAt: string; endsAt: string } {
+    const shown = events.some((e) => e.isPublic) ? events.filter((e) => e.isPublic) : events;
+    const span = spanOf(shown);
+    const now = new Date().toISOString();
+    return { startsAt: span?.startsAt.toISOString() ?? now, endsAt: span?.endsAt.toISOString() ?? now };
+  }
+
+  private toPublic(c: Celebration, confirmedPeople: number, events: EventRow[], availability: Parameters<SettingsService['availability']>[2]): PublicCelebration {
     return {
-      ...base,
-      capacity: e.capacity,
-      rsvpOpen: e.rsvpOpen,
-      rsvpMode: e.rsvpMode,
-      rsvpDeadline: e.rsvpDeadline?.toISOString() ?? null,
-      defaultCompanions: e.defaultCompanions,
-      maxCompanions: e.maxCompanions,
-      allowCompanions: e.allowCompanions,
+      name: c.name,
+      tagline: c.tagline,
+      description: c.description,
+      timezone: c.timezone,
+      ...this.span(events),
+      contactName: c.contactName,
+      contactEmail: c.contactEmail,
+      contactPhone: c.contactPhone,
+      rsvp: this.settings.availability(c, confirmedPeople, availability),
+    };
+  }
+
+  private toAdmin(c: Celebration, confirmedPeople: number, events: EventRow[]): AdminCelebration {
+    return {
+      name: c.name,
+      tagline: c.tagline,
+      description: c.description,
+      timezone: c.timezone,
+      ...this.span(events),
+      contactName: c.contactName,
+      contactEmail: c.contactEmail,
+      contactPhone: c.contactPhone,
+      capacity: c.capacity,
+      rsvpOpen: c.rsvpOpen,
+      rsvpMode: c.rsvpMode,
+      rsvpScope: c.rsvpScope,
+      checkInScope: c.checkInScope,
+      rsvpDeadline: c.rsvpDeadline?.toISOString() ?? null,
+      defaultCompanions: c.defaultCompanions,
+      maxCompanions: c.maxCompanions,
+      allowCompanions: c.allowCompanions,
       confirmedPeople,
-      capacityRemaining: Math.max(0, e.capacity - confirmedPeople),
-      updatedAt: e.updatedAt.toISOString(),
+      capacityRemaining: Math.max(0, c.capacity - confirmedPeople),
+      updatedAt: c.updatedAt.toISOString(),
     };
   }
 }

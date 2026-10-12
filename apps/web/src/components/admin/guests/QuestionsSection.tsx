@@ -43,7 +43,7 @@ type FormValues = z.infer<typeof schema>;
 const invalidateQuestions = (queryClient: ReturnType<typeof useQueryClient>) =>
   Promise.all([
     queryClient.invalidateQueries({ queryKey: adminKeys.questions }),
-    queryClient.invalidateQueries({ queryKey: adminKeys.event }),
+    queryClient.invalidateQueries({ queryKey: adminKeys.celebration }),
   ]);
 
 function toRequest(q: AdminRsvpQuestion, change: Partial<UpsertRsvpQuestionRequest> = {}): UpsertRsvpQuestionRequest {
@@ -289,7 +289,7 @@ export function QuestionsSection() {
 
   const remove = useAdminMutation<void, string>({
     mutationFn: (id) => api.delete(`/admin/rsvp-questions/${id}`),
-    invalidate: [adminKeys.questions, adminKeys.event],
+    invalidate: [adminKeys.questions, adminKeys.celebration],
     success: 'Question deleted',
     onSuccess: () => setDeleting(null),
   });

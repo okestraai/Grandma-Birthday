@@ -11,15 +11,22 @@ const GOLD_RICH = '#B88A35';
 const IVORY = '#FAF7F0';
 const MUTED = '#6F6A61';
 
-export interface PassDetails {
-  celebrantName: string;
-  eventName: string;
-  guestName: string;
+/** One event as printed on a pass or in an email. */
+export interface EventLines {
+  name: string;
   dateText: string;
   timeText: string;
   venue: string;
   address: string;
   dressCode: string | null;
+}
+
+export interface PassDetails {
+  celebrantName: string;
+  eventName: string;
+  guestName: string;
+  /** One event prints as before (date, time, venue rows); several print one short block each. */
+  events: EventLines[];
   partySize: number;
   companions: string[];
   code: string;
@@ -76,24 +83,37 @@ export class QrService {
       doc.text(`With ${pass.companions.join(', ')}`, 30, doc.y + 2, { width: width - 60, align: 'center' });
     }
 
-    const qrSize = 150;
+    const several = pass.events.length > 1;
+    const qrSize = several ? 120 : 150;
     const qrY = doc.y + 14;
     const qr = await this.png(pass.qrValue, 600);
     doc.image(qr, (width - qrSize) / 2, qrY, { width: qrSize, height: qrSize });
     doc.fillColor(NAVY).font('Courier-Bold').fontSize(11).text(pass.code, 0, qrY + qrSize + 6, { width, align: 'center' });
 
     y = qrY + qrSize + 30;
-    const rows: [string, string | null][] = [
-      ['DATE', pass.dateText],
-      ['TIME', pass.timeText],
-      ['VENUE', `${pass.venue}, ${pass.address}`],
-      ['DRESS CODE', pass.dressCode],
-    ];
-    for (const [label, value] of rows) {
-      if (!value) continue;
-      doc.fillColor(GOLD_RICH).font('Helvetica').fontSize(7).text(label, 40, y, { width: 80, characterSpacing: 1.5 });
-      doc.fillColor(NAVY).font('Times-Roman').fontSize(10).text(value, 120, y - 1, { width: width - 160 });
-      y = Math.max(doc.y, y + 12) + 5;
+    if (several) {
+      for (const event of pass.events) {
+        doc.fillColor(GOLD_RICH).font('Helvetica').fontSize(7).text(event.name.toUpperCase(), 40, y, { width: width - 80, characterSpacing: 1.5 });
+        doc.fillColor(NAVY).font('Times-Roman').fontSize(9.5).text(`${event.dateText}, ${event.timeText}`, 40, doc.y + 2, { width: width - 80 });
+        doc.text(`${event.venue}, ${event.address}`, 40, doc.y + 1, { width: width - 80 });
+        y = doc.y + 8;
+      }
+    } else {
+      const [event] = pass.events;
+      const rows: [string, string | null][] = event
+        ? [
+            ['DATE', event.dateText],
+            ['TIME', event.timeText],
+            ['VENUE', `${event.venue}, ${event.address}`],
+            ['DRESS CODE', event.dressCode],
+          ]
+        : [];
+      for (const [label, value] of rows) {
+        if (!value) continue;
+        doc.fillColor(GOLD_RICH).font('Helvetica').fontSize(7).text(label, 40, y, { width: 80, characterSpacing: 1.5 });
+        doc.fillColor(NAVY).font('Times-Roman').fontSize(10).text(value, 120, y - 1, { width: width - 160 });
+        y = Math.max(doc.y, y + 12) + 5;
+      }
     }
 
     if (pass.revoked) {

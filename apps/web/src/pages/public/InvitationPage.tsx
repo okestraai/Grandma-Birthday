@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Link, useParams } from 'react-router';
 import { motion, useReducedMotion } from 'motion/react';
 import { AlertTriangle, CheckCircle2, Download, MapPin, Printer } from 'lucide-react';
-import type { DigitalInvitation } from '@birthday/types';
+import type { DigitalInvitation, InvitationEvent } from '@birthday/types';
 import { SEO, SITE_URL } from '@/components/seo/SEO';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -14,7 +14,7 @@ import { cn, formatEventDate, formatEventTime } from '@/lib/utils';
 import { GoldRule } from '@/components/public/section';
 import { EASE } from '@/components/public/reveal';
 import { AddToCalendar } from '@/components/public/event/AddToCalendar';
-import { eventLocation } from '@/components/public/event/event-helpers';
+import { directionsHref, eventLocation, eventTimes } from '@/components/public/event/event-helpers';
 import type { CalendarEvent } from '@/components/public/calendar';
 import { Sparkles } from '@/components/public/motion';
 
@@ -67,18 +67,70 @@ function Envelope({ mark, onDone }: { mark: string; onDone: () => void }) {
   );
 }
 
-function calendarEventFor(inv: DigitalInvitation, token: string): CalendarEvent {
-  return {
-    uid: `invitation-${inv.code}@${new URL(SITE_URL).host}`,
-    title: inv.event.name,
-    startsAt: inv.event.startsAt,
-    endsAt: inv.event.endsAt,
-    location: eventLocation(inv.event),
-    description: [`Invitation for ${inv.guestName} (code ${inv.code})`, inv.event.dressCode ? `Dress code: ${inv.event.dressCode}` : null, `${SITE_URL}/invitation/${token}`]
+/** Calendar entries for the guest's events; a single event keeps the identifier it always had. */
+function calendarEventsFor(inv: DigitalInvitation, token: string): CalendarEvent[] {
+  const host = new URL(SITE_URL).host;
+  const several = inv.events.length > 1;
+  return inv.events.map((event) => ({
+    uid: several ? `invitation-${inv.code}-${event.id}@${host}` : `invitation-${inv.code}@${host}`,
+    title: several ? `${event.name} · ${inv.celebration.name}` : event.name,
+    label: event.name,
+    startsAt: event.startsAt,
+    endsAt: event.endsAt,
+    location: eventLocation(event),
+    description: [`Invitation for ${inv.guestName} (code ${inv.code})`, event.dressCode ? `Dress code: ${event.dressCode}` : null, `${SITE_URL}/invitation/${token}`]
       .filter(Boolean)
       .join('\n'),
     url: `${SITE_URL}/invitation/${token}`,
-  };
+  }));
+}
+
+/** The guest's events on the pass, when there are several: one row each, with directions. */
+function EventList({ events, timezone }: { events: InvitationEvent[]; timezone: string }) {
+  return (
+    <div className="col-span-2 border-t border-gold/30 pt-3">
+      <dt className="text-[10px] font-medium uppercase tracking-[0.25em] text-muted">Your events</dt>
+      <dd className="mt-2">
+        <ul className="space-y-3">
+          {events.map((event) => {
+            const directions = directionsHref(event);
+            return (
+              <li key={event.id} className="rounded-xl border border-gold/25 bg-white/60 px-4 py-3">
+                <p className="flex items-baseline justify-between gap-3">
+                  <span className="font-display text-lg leading-snug text-navy">{event.name}</span>
+                  <span className="shrink-0 text-sm text-navy">
+                    {event.partySize} {event.partySize === 1 ? 'guest' : 'guests'}
+                  </span>
+                </p>
+                <p className="mt-0.5 text-sm text-charcoal/80">
+                  <time dateTime={event.startsAt}>{formatEventDate(event.startsAt, timezone, { year: undefined })}</time> · {eventTimes(event, timezone)}
+                </p>
+                <p className="text-sm text-charcoal/75">
+                  {event.venueName}, {event.address}
+                </p>
+                {event.dressCode && <p className="text-sm text-muted">Dress code: {event.dressCode}</p>}
+                <p className="mt-1 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm">
+                  {event.checkedIn && (
+                    <span className="inline-flex items-center gap-1 text-success">
+                      <CheckCircle2 className="size-3.5" aria-hidden /> Checked in
+                    </span>
+                  )}
+                  <a
+                    href={directions.href}
+                    {...(directions.newTab ? { target: '_blank', rel: 'noopener noreferrer' } : {})}
+                    className="no-print inline-flex min-h-11 items-center gap-1 font-medium text-emerald underline-offset-4 hover:underline"
+                  >
+                    <MapPin className="size-3.5" aria-hidden /> Directions
+                    {directions.newTab && <span className="sr-only"> (opens in a new tab)</span>}
+                  </a>
+                </p>
+              </li>
+            );
+          })}
+        </ul>
+      </dd>
+    </div>
+  );
 }
 
 function Backdrop({ children }: { children: React.ReactNode }) {
@@ -153,11 +205,11 @@ export default function InvitationPage() {
               {notFound
                 ? 'Please check that the link matches the one in your email. Links are personal and must be copied in full.'
                 : 'If you believe this is a mistake, please contact the hosts and they will be glad to help.'}
-              {site?.event.contactEmail && (
+              {site?.celebration.contactEmail && (
                 <>
                   {' '}
-                  <a className="font-medium text-emerald underline underline-offset-4" href={`mailto:${site.event.contactEmail}`}>
-                    {site.event.contactEmail}
+                  <a className="font-medium text-emerald underline underline-offset-4" href={`mailto:${site.celebration.contactEmail}`}>
+                    {site.celebration.contactEmail}
                   </a>
                 </>
               )}
@@ -174,7 +226,10 @@ export default function InvitationPage() {
   }
 
   const inv = query.data;
-  const { event } = inv;
+  const { celebration, events } = inv;
+  const timezone = celebration.timezone;
+  // One event keeps the original pass layout; several are listed one by one.
+  const event = events.length === 1 ? events[0] : null;
   const revoked = inv.status === 'REVOKED';
   const declined = inv.response === 'DECLINED';
   const usable = !revoked && !declined;
@@ -182,7 +237,12 @@ export default function InvitationPage() {
 
   return (
     <Backdrop>
-      <SEO title={`Invitation for ${inv.guestName}`} description={`${event.name} · ${formatEventDate(event.startsAt, event.timezone)}`} noindex siteName={siteName} />
+      <SEO
+        title={`Invitation for ${inv.guestName}`}
+        description={events[0] ? `${celebration.name} · ${formatEventDate(events[0].startsAt, timezone)}` : celebration.name}
+        noindex
+        siteName={siteName}
+      />
 
       {(revoked || declined) && (
         <div role="alert" className={cn('mx-auto mb-6 flex max-w-xl gap-3 rounded-2xl border px-5 py-4 text-sm leading-relaxed', revoked ? 'border-error/40 bg-error/15 text-ivory' : 'border-gold/40 bg-white/10 text-ivory')}>
@@ -191,11 +251,11 @@ export default function InvitationPage() {
             {revoked
               ? 'This invitation has been withdrawn and can no longer be used for entry. Please contact the hosts if you have any questions.'
               : 'You have let us know that you cannot attend. We will miss you. If your plans change, please contact the hosts.'}
-            {site?.event.contactEmail && (
+            {site?.celebration.contactEmail && (
               <>
                 {' '}
-                <a className="font-medium text-gold underline underline-offset-4" href={`mailto:${site.event.contactEmail}`}>
-                  {site.event.contactEmail}
+                <a className="font-medium text-gold underline underline-offset-4" href={`mailto:${site.celebration.contactEmail}`}>
+                  {site.celebration.contactEmail}
                 </a>
               </>
             )}
@@ -234,8 +294,8 @@ export default function InvitationPage() {
             >
               70
             </motion.p>
-            <p className="mt-3 font-display text-2xl leading-snug">{event.celebrantName}</p>
-            <p className="mt-1 text-sm text-ivory/70">{event.name}</p>
+            <p className="mt-3 font-display text-2xl leading-snug">{celebration.celebrantName}</p>
+            <p className="mt-1 text-sm text-ivory/70">{celebration.name}</p>
           </div>
         </div>
 
@@ -246,7 +306,7 @@ export default function InvitationPage() {
             {inv.guestName}
           </h1>
           {inv.categoryName && <p className="mt-1 text-sm text-muted">{inv.categoryName}</p>}
-          {inv.checkedIn && (
+          {inv.checkedIn && event && (
             <p className="mt-3 inline-flex items-center gap-1.5 rounded-full bg-success/10 px-3 py-1 text-xs font-medium text-success">
               <CheckCircle2 className="size-3.5" aria-hidden /> Checked in
             </p>
@@ -254,21 +314,32 @@ export default function InvitationPage() {
           <GoldRule className="mt-6" />
 
           <dl className="mt-6 grid grid-cols-2 gap-x-6 gap-y-4 text-left">
-            <Row label="Date">
-              <time dateTime={event.startsAt}>{formatEventDate(event.startsAt, event.timezone)}</time>
-            </Row>
-            <Row label="Time">
-              {formatEventTime(event.startsAt, event.timezone)} – {formatEventTime(event.endsAt, event.timezone)}
-            </Row>
-            <Row label="Venue" wide>
-              <span className="font-medium">{event.venueName}</span>
-              <br />
-              <span className="text-sm text-charcoal/75">{event.address}</span>
-            </Row>
-            <Row label="Admits">
-              {inv.partySize} {inv.partySize === 1 ? 'guest' : 'guests'}
-            </Row>
-            {event.dressCode ? <Row label="Dress code">{event.dressCode}</Row> : <Row label="Invitation code">{inv.code}</Row>}
+            {event ? (
+              <>
+                <Row label="Date">
+                  <time dateTime={event.startsAt}>{formatEventDate(event.startsAt, timezone)}</time>
+                </Row>
+                <Row label="Time">
+                  {formatEventTime(event.startsAt, timezone)} – {formatEventTime(event.endsAt, timezone)}
+                </Row>
+                <Row label="Venue" wide>
+                  <span className="font-medium">{event.venueName}</span>
+                  <br />
+                  <span className="text-sm text-charcoal/75">{event.address}</span>
+                </Row>
+                <Row label="Admits">
+                  {inv.partySize} {inv.partySize === 1 ? 'guest' : 'guests'}
+                </Row>
+                {event.dressCode ? <Row label="Dress code">{event.dressCode}</Row> : <Row label="Invitation code">{inv.code}</Row>}
+              </>
+            ) : (
+              <>
+                {events.length > 0 && <EventList events={events} timezone={timezone} />}
+                <Row label="Invitation code" wide>
+                  {inv.code}
+                </Row>
+              </>
+            )}
             {inv.companions.length > 0 && (
               <Row label={inv.companions.length === 1 ? 'Accompanied by' : `Accompanied by (${inv.companionCount})`} wide>
                 {inv.companions.join(', ')}
@@ -282,7 +353,7 @@ export default function InvitationPage() {
                 svgUrl={inv.qrSvgUrl}
                 alt={`Entry QR code for ${inv.guestName}`}
                 caption={`Code ${inv.code}`}
-                title="Present at the entrance"
+                title={events.length > 1 ? 'Present at the entrance of each event' : 'Present at the entrance'}
                 size={200}
                 actions={false}
               />
@@ -308,8 +379,15 @@ export default function InvitationPage() {
         <Button variant="outline" className="text-ivory" onClick={() => window.print()}>
           <Printer aria-hidden /> Print
         </Button>
-        {usable && <AddToCalendar event={calendarEventFor(inv, token)} showGoogle={false} className="justify-center text-ivory [&>button]:w-full sm:[&>button]:w-auto" />}
-        {event.mapUrl && (
+        {usable && (
+          <AddToCalendar
+            events={calendarEventsFor(inv, token)}
+            filename={celebration.name}
+            showGoogle={false}
+            className="justify-center text-ivory [&>button]:w-full sm:[&>button]:w-auto"
+          />
+        )}
+        {event?.mapUrl && (
           <Button asChild variant="ghost" className="text-ivory hover:bg-white/10">
             <a href={event.mapUrl} target="_blank" rel="noopener noreferrer">
               <MapPin aria-hidden /> Directions<span className="sr-only"> (opens in a new tab)</span>

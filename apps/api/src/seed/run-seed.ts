@@ -21,16 +21,19 @@ import {
   DEMO_ALBUMS,
   DEMO_CATEGORIES,
   DEMO_CELEBRANT,
-  DEMO_EVENT,
+  DEMO_CELEBRATION,
+  DEMO_EVENTS,
   DEMO_FAMILY,
   DEMO_GUESTS,
   DEMO_PASSWORD,
   DEMO_PROGRAMME,
   DEMO_QUESTIONS,
   DEMO_RELATIONS,
+  DEMO_SERVICE_PROGRAMME,
   DEMO_TESTIMONIALS,
   DEMO_TIMELINE,
   DEMO_USERS,
+  type DemoProgrammeItem,
 } from './demo-content';
 import { PALETTES, portrait, scene } from './demo-images';
 
@@ -52,6 +55,8 @@ async function main(): Promise<void> {
     if (fresh) {
       if (process.env.NODE_ENV === 'production') throw new Error('--fresh is refused when NODE_ENV=production');
       await wipe(prisma, app.get(MediaService));
+      // The wipe removes the events too; put the placeholder back.
+      await settingsService.ensureDefaults();
     }
 
     await seedAdmin(prisma);
@@ -75,6 +80,8 @@ async function wipe(prisma: PrismaService, media: MediaService): Promise<void> {
   if (ids.length) await media.deleteMany(ids);
   await prisma.$transaction([
     prisma.checkIn.deleteMany(),
+    prisma.rsvpEvent.deleteMany(),
+    prisma.guestEvent.deleteMany(),
     prisma.companion.deleteMany(),
     prisma.rsvp.deleteMany(),
     prisma.invitation.deleteMany(),
@@ -86,6 +93,8 @@ async function wipe(prisma: PrismaService, media: MediaService): Promise<void> {
     prisma.familyMember.deleteMany(),
     prisma.timelineEntry.deleteMany(),
     prisma.programmeItem.deleteMany(),
+    prisma.eventCategory.deleteMany(),
+    prisma.event.deleteMany(),
     prisma.album.deleteMany(),
     prisma.uploadSession.deleteMany(),
     prisma.auditLog.deleteMany(),
@@ -120,12 +129,29 @@ async function seedDemo(prisma: PrismaService, ingest: MediaIngestService, setti
     return ingest.ingestBuffer(buffer, name, { source: 'ADMIN', status: 'APPROVED', settings, uploadedById: admin.id, ...extra });
   };
 
-  // Event, celebrant, programme
-  await prisma.event.update({ where: { id: 1 }, data: DEMO_EVENT });
+  // Celebration, celebrant, events and programmes. The guest categories come first: events are limited by them.
+  await prisma.celebration.update({ where: { id: 1 }, data: DEMO_CELEBRATION });
   const portraitMedia = await photo(await portrait(1), 'portrait.jpg', { caption: 'Margaret, 2026', altText: 'Portrait of Margaret' });
   await prisma.celebrant.update({ where: { id: 1 }, data: { ...DEMO_CELEBRANT, portraitMediaId: portraitMedia.id } });
-  await prisma.programmeItem.createMany({ data: DEMO_PROGRAMME.map((p, i) => ({ ...p, sortOrder: i })) });
-  log.log('Event, celebrant and programme');
+  const categories: Record<string, string> = {};
+  for (const [i, c] of DEMO_CATEGORIES.entries()) categories[c.name] = (await prisma.guestCategory.create({ data: { ...c, sortOrder: i } })).id;
+  // The placeholder event from first boot makes way for the demo events.
+  await prisma.event.deleteMany();
+  const events: Record<string, string> = {};
+  for (const [i, { categories: invited, ...e }] of DEMO_EVENTS.entries()) {
+    const row = await prisma.event.create({
+      data: { ...e, sortOrder: i, invitedCategories: { create: invited.map((name) => ({ categoryId: categories[name] })) } },
+    });
+    events[e.slug] = row.id;
+  }
+  const programmes: [string, DemoProgrammeItem[]][] = [
+    ['thanksgiving-service', DEMO_SERVICE_PROGRAMME],
+    ['birthday-dinner', DEMO_PROGRAMME],
+  ];
+  for (const [slug, items] of programmes) {
+    await prisma.programmeItem.createMany({ data: items.map((p, i) => ({ ...p, eventId: events[slug], sortOrder: i })) });
+  }
+  log.log('Celebration, celebrant, events and programmes');
 
   // Albums and photos
   const albums: Record<string, string> = {};
@@ -161,8 +187,6 @@ async function seedDemo(prisma: PrismaService, ingest: MediaIngestService, setti
   log.log('Family tree');
 
   // Guests, RSVPs, invitations
-  const categories: Record<string, string> = {};
-  for (const [i, c] of DEMO_CATEGORIES.entries()) categories[c.name] = (await prisma.guestCategory.create({ data: { ...c, sortOrder: i } })).id;
   const questions = [];
   for (const [i, q] of DEMO_QUESTIONS.entries()) questions.push(await prisma.rsvpQuestion.create({ data: { ...q, sortOrder: i } }));
   for (const [i, g] of DEMO_GUESTS.entries()) {
@@ -190,6 +214,12 @@ async function seedDemo(prisma: PrismaService, ingest: MediaIngestService, setti
           answers: g.response === 'ATTENDING' ? { [questions[0].id]: i % 2 ? 'Yes' : 'Not sure yet' } : {},
           submittedAt: new Date(Date.now() - (DEMO_GUESTS.length - i) * 86_400_000),
           companions: { create: g.response === 'ATTENDING' ? g.companions.map((fullName) => ({ fullName })) : [] },
+          events: {
+            create:
+              g.response === 'ATTENDING'
+                ? (g.events ?? []).map((slug) => ({ eventId: events[slug], companionCount: g.fewer?.[slug] ?? g.companions.length }))
+                : [],
+          },
         },
       });
     }

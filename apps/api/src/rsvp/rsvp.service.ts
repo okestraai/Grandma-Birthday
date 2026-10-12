@@ -1,19 +1,22 @@
 import { HttpStatus, Inject, Injectable, Logger } from '@nestjs/common';
 import { APP_CONFIG, type AppConfig } from '../config/app-config';
-import type { RsvpFormConfig, RsvpInvitePrefill, SubmitRsvpResult } from '@birthday/types';
+import type { RsvpEventChoice, RsvpFormConfig, RsvpInvitePrefill, SubmitRsvpResult } from '@birthday/types';
 import { AppException, Errors } from '../common/errors';
 import type { RequestMeta } from '../common/request-context';
-import { Prisma, type Event, type ModerationStatus, type RsvpQuestion, type Settings } from '../generated/prisma/client';
+import { Prisma, type Celebration, type Event, type ModerationStatus, type RsvpQuestion, type Settings } from '../generated/prisma/client';
 import { LOCK_KEYS, PrismaService, type Tx } from '../prisma/prisma.service';
 import { AuditService } from '../audit/audit.service';
 import { InvitationsService } from '../invitations/invitations.service';
 import { SettingsService } from '../settings/settings.service';
+import { EventsService, toInvitationEvent, toRsvpOption, withFull } from '../events/events.service';
 import type { RsvpTributeDto, SubmitRsvpDto } from './rsvp.dto';
 import { hashIp } from '../common/utils/crypto';
 
 export interface RsvpInput {
   response: 'ATTENDING' | 'DECLINED';
   companions: { fullName: string; dietary?: string | null }[];
+  /** Undefined: see chooseEvents. */
+  events?: RsvpEventChoice[];
   dietary?: string | null;
   accessibility?: string | null;
   message?: string | null;
@@ -21,8 +24,44 @@ export interface RsvpInput {
 }
 
 /** The companion limit that applies to a guest: their allowance, or 0 when companions are off. */
-export function companionLimit(event: Pick<Event, 'allowCompanions'>, allowed: number): number {
-  return event.allowCompanions ? allowed : 0;
+export function companionLimit(celebration: Pick<Celebration, 'allowCompanions'>, allowed: number): number {
+  return celebration.allowCompanions ? allowed : 0;
+}
+
+export interface EventChoice {
+  event: Event;
+  companionCount: number;
+}
+
+/**
+ * The events an attending guest will come to. `allowed` are the events they may reply to.
+ * Without a list, `fallback` is used when given (an admin keeping the guest's current choices),
+ * otherwise every allowed event with all their companions. Each companion count is at most the
+ * number of companions named.
+ */
+export function chooseEvents(allowed: Event[], requested: RsvpEventChoice[] | undefined, companions: number, fallback?: RsvpEventChoice[]): EventChoice[] {
+  const byId = new Map(allowed.map((e) => [e.id, e]));
+  if (!requested) {
+    const kept = (fallback ?? []).filter((c) => byId.has(c.eventId)).map((c) => ({ event: byId.get(c.eventId)!, companionCount: Math.min(c.companionCount, companions) }));
+    const choices = kept.length ? kept : allowed.map((event) => ({ event, companionCount: companions }));
+    if (!choices.length) throw Errors.validation({ events: ['There is no event you can reply to at the moment.'] });
+    return choices;
+  }
+  const errors: Record<string, string[]> = {};
+  const seen = new Set<string>();
+  const choices: EventChoice[] = [];
+  requested.forEach((choice, i) => {
+    const event = byId.get(choice.eventId);
+    if (!event) errors[`events.${i}.eventId`] = ['You cannot reply to this event.'];
+    else if (choice.companionCount > companions) errors[`events.${i}.companionCount`] = [`At most ${companions} of your companions can come to ${event.name}.`];
+    else if (!seen.has(event.id)) {
+      seen.add(event.id);
+      choices.push({ event, companionCount: choice.companionCount });
+    }
+  });
+  if (!requested.length) errors.events = ['Choose at least one event.'];
+  if (Object.keys(errors).length) throw Errors.validation(errors);
+  return choices;
 }
 
 /**
@@ -59,32 +98,38 @@ export class RsvpService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly settings: SettingsService,
+    private readonly events: EventsService,
     private readonly invitations: InvitationsService,
     private readonly audit: AuditService,
     @Inject(APP_CONFIG) private readonly config: AppConfig,
   ) {}
 
   async formConfig(): Promise<RsvpFormConfig> {
-    const [event, confirmed, categories, questions, settings, byCategory] = await Promise.all([
-      this.settings.getEvent(),
+    const [celebration, confirmed, categories, questions, settings, byCategory, events, attendance] = await Promise.all([
+      this.settings.getCelebration(),
       this.settings.confirmedPeople(),
       this.prisma.guestCategory.findMany({ where: { selfSelectable: true }, orderBy: [{ sortOrder: 'asc' }, { name: 'asc' }] }),
       this.activeQuestions(),
       this.settings.getSettings(),
       this.settings.confirmedPeopleByCategory(),
+      this.events.list(),
+      this.events.attendance(),
     ]);
+    const now = new Date();
     return {
       tributes: { open: settings.testimonialsOpen, requireApproval: settings.testimonialsRequireApproval },
-      availability: this.settings.availability(event, confirmed),
-      allowCompanions: event.allowCompanions,
-      maxCompanions: companionLimit(event, event.maxCompanions),
+      rsvpScope: celebration.rsvpScope,
+      availability: this.settings.availability(celebration, confirmed, withFull(events, attendance), now),
+      allowCompanions: celebration.allowCompanions,
+      maxCompanions: companionLimit(celebration, celebration.maxCompanions),
       categories: categories.map((c) => ({
         id: c.id,
         name: c.name,
         description: c.description,
-        defaultCompanions: Math.min(c.defaultCompanions, event.maxCompanions),
+        defaultCompanions: Math.min(c.defaultCompanions, celebration.maxCompanions),
         full: c.capacity !== null && (byCategory.get(c.id) ?? 0) >= c.capacity,
       })),
+      events: events.filter((e) => e.isPublic && e.rsvpEnabled && now < e.endsAt).map((e) => toRsvpOption(e, attendance)),
       questions: questions.map((q) => ({ id: q.id, label: q.label, helpText: q.helpText, type: q.type, options: q.options, required: q.required, sortOrder: q.sortOrder })),
     };
   }
@@ -92,20 +137,27 @@ export class RsvpService {
   async invitePrefill(token: string): Promise<RsvpInvitePrefill> {
     const invitation = await this.invitations.findByToken(token);
     if (invitation.status === 'REVOKED') throw new AppException(HttpStatus.GONE, 'INVITATION_REVOKED', 'This invitation is no longer active.');
-    const event = await this.settings.getEvent();
     const { guest } = invitation;
+    const [celebration, events, attendance, tribute] = await Promise.all([
+      this.settings.getCelebration(),
+      this.events.forGuest(this.prisma, guest.id),
+      this.events.attendance(),
+      this.prisma.testimonial.findUnique({ where: { guestId: guest.id } }),
+    ]);
     const rsvp = guest.rsvp;
-    const tribute = await this.prisma.testimonial.findUnique({ where: { guestId: guest.id } });
+    const now = new Date();
     return {
       fullName: guest.fullName,
       email: guest.email,
       phone: guest.phone,
       categoryName: guest.category?.name ?? null,
-      allowedCompanions: companionLimit(event, guest.allowedCompanions),
+      allowedCompanions: companionLimit(celebration, guest.allowedCompanions),
+      events: events.filter((e) => e.rsvpEnabled && now < e.endsAt).map((e) => toRsvpOption(e, attendance)),
       existing: rsvp
         ? {
             response: rsvp.response,
             companionCount: rsvp.companionCount,
+            events: rsvp.events.map((e) => ({ eventId: e.eventId, companionCount: e.companionCount })),
             companions: rsvp.companions.map((c) => ({ fullName: c.fullName, dietary: c.dietary })),
             dietary: rsvp.dietary,
             accessibility: rsvp.accessibility,
@@ -119,9 +171,13 @@ export class RsvpService {
 
   /** Public RSVP. Every rule is checked here, on the server. */
   async submit(dto: SubmitRsvpDto, meta: RequestMeta): Promise<SubmitRsvpResult> {
-    const event = await this.settings.getEvent();
-    const confirmed = await this.settings.confirmedPeople();
-    const availability = this.settings.availability(event, confirmed);
+    const [celebration, confirmed, events, attendance] = await Promise.all([
+      this.settings.getCelebration(),
+      this.settings.confirmedPeople(),
+      this.events.list(),
+      this.events.attendance(),
+    ]);
+    const availability = this.settings.availability(celebration, confirmed, withFull(events, attendance));
     // A full event still accepts declines and updates from existing guests; the capacity
     // rule below decides whether an attending reply fits.
     if (!availability.open && availability.closedReason !== 'CAPACITY_REACHED') {
@@ -147,27 +203,27 @@ export class RsvpService {
         allowed = invitation.guest.allowedCompanions;
         await tx.guest.update({ where: { id: guestId }, data: { fullName: dto.fullName, phone: dto.phone ?? undefined } });
       } else {
-        if (event.rsvpMode === 'INVITE_ONLY') {
+        if (celebration.rsvpMode === 'INVITE_ONLY') {
           throw new AppException(HttpStatus.FORBIDDEN, 'RSVP_INVITE_REQUIRED', 'This celebration is by invitation. Please use the link in your invitation.');
         }
         const existing = await tx.guest.findUnique({ where: { email: dto.email }, include: { invitation: true } });
         if (existing) {
           return { conflict: existing.invitation?.id ?? null } as const;
         }
-        let categoryDefault = event.defaultCompanions;
+        let categoryDefault = celebration.defaultCompanions;
         if (dto.categoryId) {
           const category = await tx.guestCategory.findUnique({ where: { id: dto.categoryId } });
           if (!category || !category.selfSelectable) throw Errors.validation({ categoryId: ['Choose one of the listed guest categories.'] });
           categoryDefault = category.defaultCompanions;
         }
-        allowed = Math.min(categoryDefault, event.maxCompanions);
+        allowed = Math.min(categoryDefault, celebration.maxCompanions);
         const guest = await tx.guest.create({
           data: { fullName: dto.fullName, email: dto.email, phone: dto.phone ?? null, categoryId: dto.categoryId ?? null, allowedCompanions: allowed, source: 'SELF_REGISTERED' },
         });
         guestId = guest.id;
       }
 
-      const limit = companionLimit(event, allowed);
+      const limit = companionLimit(celebration, allowed);
       if (companions.length > limit) {
         throw new AppException(
           HttpStatus.UNPROCESSABLE_ENTITY,
@@ -176,16 +232,16 @@ export class RsvpService {
         );
       }
 
-      await this.saveRsvp(tx, guestId, event, { ...dto, companions, answers }, false);
+      const chosen = await this.saveRsvp(tx, guestId, celebration, { ...dto, companions, answers }, { overrideCapacity: false, admin: false });
       const invitation = attending || dto.inviteToken ? await this.invitations.ensure(tx, guestId) : null;
       const tributeStatus = dto.tribute ? await this.saveTribute(tx, guestId, dto, dto.tribute, siteSettings, meta) : null;
       await this.audit.record(meta, {
         action: 'GUEST_SUBMITTED_RSVP',
         entityType: 'Guest',
         entityId: guestId,
-        metadata: { response: dto.response, companions: companions.length, viaInvite: Boolean(dto.inviteToken) },
+        metadata: { response: dto.response, companions: companions.length, viaInvite: Boolean(dto.inviteToken), events: chosen.map((c) => c.event.id) },
       }, tx);
-      return { invitation, tributeStatus } as const;
+      return { invitation, tributeStatus, chosen } as const;
     });
 
     if ('conflict' in result) {
@@ -205,6 +261,7 @@ export class RsvpService {
       invitationCode: attending ? (result.invitation?.code ?? null) : null,
       guestName: dto.fullName,
       companionCount: companions.length,
+      events: result.chosen.map((c) => toInvitationEvent(c.event, 1 + c.companionCount, false)),
       emailSent,
       tributeStatus: result.tributeStatus,
     };
@@ -252,16 +309,29 @@ export class RsvpService {
   }
 
   /**
-   * Writes a guest's RSVP and companions. Enforces capacity under the capacity lock, which the
-   * caller must already hold. `overrideCapacity` is for audited admin overrides only.
+   * Writes a guest's RSVP, companions and events. Enforces the celebration, category and event
+   * capacities under the capacity lock, which the caller must already hold. `overrideCapacity` is
+   * for audited admin overrides only. Admins may also record replies for events that have ended.
+   * With rsvpScope WHOLE_CELEBRATION a yes covers every event the guest may attend, with all their
+   * companions, whatever events were sent. Returns the events chosen (none when declining).
    */
-  async saveRsvp(tx: Tx, guestId: string, event: Event, input: RsvpInput, overrideCapacity: boolean): Promise<void> {
+  async saveRsvp(tx: Tx, guestId: string, celebration: Celebration, input: RsvpInput, options: { overrideCapacity: boolean; admin: boolean }): Promise<EventChoice[]> {
     const attending = input.response === 'ATTENDING';
     const companions = attending ? input.companions : [];
-    if (attending && !overrideCapacity) {
+    let chosen: EventChoice[] = [];
+    if (attending) {
+      const now = new Date();
+      const allowed = (await this.events.forGuest(tx, guestId)).filter((e) => e.rsvpEnabled && (options.admin || now < e.endsAt));
+      const current = options.admin ? await tx.rsvpEvent.findMany({ where: { rsvp: { guestId } }, select: { eventId: true, companionCount: true } }) : undefined;
+      chosen =
+        celebration.rsvpScope === 'WHOLE_CELEBRATION'
+          ? chooseEvents(allowed, undefined, companions.length)
+          : chooseEvents(allowed, input.events, companions.length, current);
+    }
+    if (attending && !options.overrideCapacity) {
       const others = await this.settings.confirmedPeople(tx, guestId);
-      if (others + 1 + companions.length > event.capacity) {
-        const left = Math.max(0, event.capacity - others);
+      if (others + 1 + companions.length > celebration.capacity) {
+        const left = Math.max(0, celebration.capacity - others);
         throw new AppException(
           HttpStatus.CONFLICT,
           'EVENT_CAPACITY_REACHED',
@@ -269,7 +339,7 @@ export class RsvpService {
         );
       }
     }
-    if (attending && !overrideCapacity) {
+    if (attending && !options.overrideCapacity) {
       const guest = await tx.guest.findUnique({ where: { id: guestId }, select: { category: true } });
       const category = guest?.category;
       if (category && category.capacity !== null) {
@@ -285,6 +355,7 @@ export class RsvpService {
           );
         }
       }
+      await this.events.assertRoom(tx, guestId, chosen);
     }
     const data = {
       response: input.response,
@@ -299,6 +370,11 @@ export class RsvpService {
     if (companions.length) {
       await tx.companion.createMany({ data: companions.map((c) => ({ rsvpId: rsvp.id, fullName: c.fullName, dietary: c.dietary || null })) });
     }
+    await tx.rsvpEvent.deleteMany({ where: { rsvpId: rsvp.id } });
+    if (chosen.length) {
+      await tx.rsvpEvent.createMany({ data: chosen.map((c) => ({ rsvpId: rsvp.id, eventId: c.event.id, companionCount: c.companionCount })) });
+    }
+    return chosen;
   }
 
   async lockCapacity(tx: Tx): Promise<void> {

@@ -44,7 +44,7 @@ describe('Capacity per guest category, bulk invitations, private albums (e2e)', 
     const friends = await category('Friends', null);
     await ctx.http().post('/api/rsvp').send(rsvp('a@example.com', family.id, ['One Plus'])).expect(201);
     const put = (allocations: object[]) =>
-      admin.agent.put('/api/admin/event/allocations').set('X-CSRF-Token', admin.csrf).send({ allocations });
+      admin.agent.put('/api/admin/celebration/allocations').set('X-CSRF-Token', admin.csrf).send({ allocations });
 
     const tooMany = await put([{ categoryId: family.id, capacity: 60 }, { categoryId: friends.id, capacity: 50 }]).expect(400);
     expect(tooMany.body.message).toMatch(/110 places.*capacity is 100/);
@@ -56,7 +56,7 @@ describe('Capacity per guest category, bulk invitations, private albums (e2e)', 
     expect(ok.categories.find((c: { name: string }) => c.name === 'Family')).toMatchObject({ capacity: 60, confirmedPeople: 2, remaining: 58 });
 
     // Event capacity cannot drop below what is set aside.
-    const lower = await admin.agent.put('/api/admin/event').set('X-CSRF-Token', admin.csrf).send({ capacity: 50 }).expect(400);
+    const lower = await admin.agent.put('/api/admin/celebration').set('X-CSRF-Token', admin.csrf).send({ capacity: 50 }).expect(400);
     expect(lower.body.details.capacity[0]).toMatch(/60 places are set aside/);
   });
 

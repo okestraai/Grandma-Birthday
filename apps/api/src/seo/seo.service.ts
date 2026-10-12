@@ -2,16 +2,20 @@ import { Inject, Injectable } from '@nestjs/common';
 import type { SeoMetadata } from '@birthday/types';
 import { APP_CONFIG, type AppConfig } from '../config/app-config';
 import { escapeHtml } from '../notifications/templates';
-import type { Celebrant, Event } from '../generated/prisma/client';
+import type { Celebrant, Celebration } from '../generated/prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { SettingsService } from '../settings/settings.service';
+import { EventsService, spanOf, type EventRow } from '../events/events.service';
+import { formatEventDate } from '../invitations/invitations.service';
 import { ageAt } from '../celebrant/celebrant.mapper';
 import { mediaVersion, PUBLIC_MEDIA_SELECT, type PublicMediaRow } from '../media/media.mapper';
 
 const PRIVATE_PREFIXES = ['/admin', '/invitation/', '/memories/upload/', '/api/'];
 
 interface Context {
-  event: Event;
+  celebration: Celebration;
+  /** Public events in display order. */
+  events: EventRow[];
   celebrant: Celebrant & { portraitMedia: PublicMediaRow | null };
   siteName: string;
   description: string;
@@ -27,6 +31,7 @@ export class SeoService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly settings: SettingsService,
+    private readonly eventsService: EventsService,
     @Inject(APP_CONFIG) private readonly config: AppConfig,
   ) {}
 
@@ -39,18 +44,19 @@ export class SeoService {
   }
 
   private async context(): Promise<Context> {
-    const [event, celebrant, settings] = await Promise.all([
-      this.settings.getEvent(),
+    const [celebration, events, firstStart, celebrant, settings] = await Promise.all([
+      this.settings.getCelebration(),
+      this.eventsService.listPublic(),
+      this.eventsService.firstStart(),
       this.prisma.celebrant.findUniqueOrThrow({ where: { id: 1 }, include: { portraitMedia: { select: PUBLIC_MEDIA_SELECT } } }),
       this.prisma.settings.findUniqueOrThrow({ where: { id: 1 }, include: { ogImageMedia: { select: PUBLIC_MEDIA_SELECT }, heroMedia: { select: PUBLIC_MEDIA_SELECT } } }),
     ]);
-    const age = ageAt(celebrant.birthDate, event.startsAt) ?? 70;
+    const age = ageAt(celebrant.birthDate, firstStart) ?? 70;
     const siteName = settings.siteTitle ?? `${celebrant.preferredName} at ${age}`;
-    const description =
-      settings.siteDescription ??
-      `Join us in celebrating ${age} years of life, love and legacy: ${celebrant.fullName}. ${event.venueName}${event.city ? `, ${event.city}` : ''}.`;
+    const description = settings.siteDescription ?? `Join us in celebrating ${age} years of life, love and legacy: ${celebrant.fullName}. ${this.whereAndWhen(celebration, events)}`;
     return {
-      event,
+      celebration,
+      events,
       celebrant,
       siteName,
       description,
@@ -58,13 +64,33 @@ export class SeoService {
     };
   }
 
-  private eventLd(ctx: Context): Record<string, unknown> {
-    const { event, celebrant } = ctx;
+  /**
+   * "Saturday 21 November 2026, The Emerald Ballroom, Lagos." for one event; with several,
+   * the date range and the number of events.
+   */
+  private whereAndWhen(celebration: Celebration, events: EventRow[]): string {
+    const [first] = events;
+    const span = spanOf(events);
+    if (!first || !span) return '';
+    const from = formatEventDate(span.startsAt, celebration.timezone);
+    const to = formatEventDate(span.endsAt, celebration.timezone);
+    if (events.length === 1) return `${from}, ${first.venueName}${first.city ? `, ${first.city}` : ''}.`;
+    return `${from === to ? from : `${from} to ${to}`}: ${events.length} events${first.city ? ` in ${first.city}` : ''}.`;
+  }
+
+  /** One schema.org Event per public event. */
+  private eventsLd(ctx: Context): Record<string, unknown>[] {
+    return ctx.events.map((event) => this.eventLd(ctx, event));
+  }
+
+  private eventLd(ctx: Context, event: EventRow): Record<string, unknown> {
+    const { celebrant } = ctx;
+    const single = ctx.events.length === 1;
     return {
       '@context': 'https://schema.org',
       '@type': 'Event',
-      name: event.name,
-      description: event.description ?? ctx.description,
+      name: single ? event.name : `${event.name}: ${ctx.celebration.name}`,
+      description: event.description ?? ctx.celebration.description ?? ctx.description,
       startDate: event.startsAt.toISOString(),
       endDate: event.endsAt.toISOString(),
       eventStatus: 'https://schema.org/EventScheduled',
@@ -76,7 +102,7 @@ export class SeoService {
         ...(event.latitude !== null && event.longitude !== null ? { geo: { '@type': 'GeoCoordinates', latitude: event.latitude, longitude: event.longitude } } : {}),
       },
       image: ctx.image ? [ctx.image] : undefined,
-      url: this.abs('/event'),
+      url: this.abs(single ? '/event' : `/event#${event.slug}`),
       performer: { '@type': 'Person', name: celebrant.fullName },
     };
   }
@@ -109,7 +135,7 @@ export class SeoService {
 
     switch (path) {
       case '/':
-        return { ...base, title: ctx.siteName, description: ctx.description, jsonLd: [this.eventLd(ctx), this.personLd(ctx)] };
+        return { ...base, title: ctx.siteName, description: ctx.description, jsonLd: [...this.eventsLd(ctx), this.personLd(ctx)] };
       case '/about':
         return { ...base, type: 'profile', title: title(`About ${ctx.celebrant.preferredName}`), description: ctx.celebrant.introduction ?? ctx.description, jsonLd: [this.personLd(ctx)] };
       case '/story':
@@ -119,13 +145,18 @@ export class SeoService {
       case '/gallery':
         return { ...base, title: title('Memories'), description: `Photographs from seventy years of ${ctx.celebrant.preferredName}'s life.` };
       case '/event':
-        return { ...base, title: title(ctx.event.name), description: `${ctx.event.venueName}. ${ctx.event.description ?? ctx.description}`.slice(0, 300), jsonLd: [this.eventLd(ctx)] };
+        return {
+          ...base,
+          title: title(ctx.celebration.name),
+          description: `${this.whereAndWhen(ctx.celebration, ctx.events)} ${ctx.celebration.description ?? ctx.description}`.trim().slice(0, 300),
+          jsonLd: this.eventsLd(ctx),
+        };
       case '/programme':
-        return { ...base, title: title('Programme'), description: `The order of the evening for ${ctx.event.name}.` };
+        return { ...base, title: title('Programme'), description: `The order of events for ${ctx.celebration.name}.` };
       case '/testimonials':
         return { ...base, title: title('Tributes'), description: `Birthday messages and tributes for ${ctx.celebrant.fullName}.` };
       case '/rsvp':
-        return { ...base, title: title('RSVP'), description: `Reply to your invitation to ${ctx.event.name}.` };
+        return { ...base, title: title('RSVP'), description: `Reply to your invitation to ${ctx.celebration.name}.` };
       default:
         break;
     }

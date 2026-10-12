@@ -1,17 +1,17 @@
 import { useState, type ReactNode } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
-import { Ban, Copy, ExternalLink, Pencil, RefreshCw, RotateCcw, Send, Trash2 } from 'lucide-react';
-import type { AdminGuestDetail, RevokeInvitationRequest } from '@birthday/types';
+import { Ban, Check, Copy, ExternalLink, Pencil, RefreshCw, RotateCcw, Send, Trash2 } from 'lucide-react';
+import type { AdminEvent, AdminGuestDetail, RevokeInvitationRequest, UpdateGuestRequest } from '@birthday/types';
 import { api } from '@/lib/api';
 import { adminKeys, affects, useAdminMutation } from '@/lib/admin-api';
 import { Badge, StatusBadge } from '@/components/ui/badge';
 import { ErrorState } from '@/components/ui/states';
 import { QRCodeCard } from '@/components/ui/qr-code-card';
 import { formatDateTime, formatRelative } from '@/lib/utils';
-import { AButton, DetailList } from '../ui';
+import { AButton, ACheckbox, DetailList } from '../ui';
 import { Confirm, Drawer, ReasonDialog } from '../overlays';
-import { CategoryLabel, RsvpBadge, useGuestCategories } from './shared';
+import { CategoryLabel, RsvpBadge, coveredByCategory, useEvents, useGuestCategories } from './shared';
 import { GuestFormDialog } from './GuestFormDialog';
 
 function Section({ title, children, actions }: { title: string; children: ReactNode; actions?: ReactNode }) {
@@ -40,11 +40,76 @@ function useInvitationAction(guestId: string | null, action: 'resend' | 'revoke'
   });
 }
 
+/**
+ * Events the guest is invited to by category, and the others an admin may add them to
+ * (PUT /admin/guests/:id { extraEventIds }, which replaces the list).
+ */
+function ExtraEvents({ guest, events }: { guest: AdminGuestDetail; events: AdminEvent[] }) {
+  const queryClient = useQueryClient();
+  const [extra, setExtra] = useState<string[]>(guest.extraEventIds);
+
+  const byCategory = events.filter((e) => coveredByCategory(e, guest.categoryId));
+  const others = events.filter((e) => !coveredByCategory(e, guest.categoryId));
+  const dirty = extra.length !== guest.extraEventIds.length || extra.some((id) => !guest.extraEventIds.includes(id));
+
+  const save = useAdminMutation<AdminGuestDetail, UpdateGuestRequest>({
+    mutationFn: (body) => api.put<AdminGuestDetail>(`/admin/guests/${guest.id}`, body),
+    invalidate: affects.guests,
+    success: 'Invited events saved',
+    onSuccess: (data) => queryClient.setQueryData(adminKeys.guest(data.id), data),
+  });
+
+  return (
+    <div className="space-y-3 text-[13px]">
+      <p className="text-charcoal">
+        <span className="text-muted">By category: </span>
+        {byCategory.length ? byCategory.map((e) => e.name).join(', ') : 'none'}
+      </p>
+      {others.length > 0 && (
+        <fieldset>
+          <legend className="mb-1 font-medium text-navy">Also invited to</legend>
+          <ul className="space-y-0.5">
+            {others.map((e) => {
+              const id = `extra-${e.id}`;
+              return (
+                <li key={e.id} className="flex min-h-10 items-center gap-2.5 md:min-h-8">
+                  <ACheckbox
+                    id={id}
+                    checked={extra.includes(e.id)}
+                    onCheckedChange={(on) => setExtra((list) => (on ? [...list, e.id] : list.filter((x) => x !== e.id)))}
+                  />
+                  <label htmlFor={id} className="text-charcoal">
+                    {e.name}
+                  </label>
+                </li>
+              );
+            })}
+          </ul>
+          <div className="mt-2 flex flex-wrap items-center gap-2">
+            <AButton size="sm" variant="emerald" disabled={!dirty} loading={save.isPending} onClick={() => save.mutate({ extraEventIds: extra })}>
+              Save invited events
+            </AButton>
+            {dirty && (
+              <AButton size="sm" variant="ghost" onClick={() => setExtra(guest.extraEventIds)}>
+                Undo
+              </AButton>
+            )}
+          </div>
+          <p className="mt-1 text-xs text-muted">Ticked events are offered to this guest on their RSVP, even though their category is not invited.</p>
+        </fieldset>
+      )}
+    </div>
+  );
+}
+
 type Dialog = 'edit' | 'revoke' | 'regenerate' | 'delete' | null;
 
 export function GuestDetailDrawer({ guestId, onClose }: { guestId: string | null; onClose: () => void }) {
   const queryClient = useQueryClient();
   const categories = useGuestCategories();
+  const events = useEvents();
+  const multiple = (events.data?.length ?? 0) > 1;
+  const eventName = (id: string) => events.data?.find((e) => e.id === id)?.name ?? 'Event';
   const [dialog, setDialog] = useState<Dialog>(null);
 
   const query = useQuery({
@@ -142,6 +207,34 @@ export function GuestDetailDrawer({ guestId, onClose }: { guestId: string | null
                   </div>
                   <DetailList
                     items={[
+                      ...(multiple && guest.rsvp.response === 'ATTENDING'
+                        ? [
+                            {
+                              label: 'Events',
+                              value: guest.events.length ? (
+                                <ul className="space-y-0.5">
+                                  {guest.events.map((e) => (
+                                    <li key={e.eventId}>
+                                      {eventName(e.eventId)}
+                                      <span className="text-muted">
+                                        {' '}
+                                        · party of {1 + e.companionCount}
+                                        {e.companionCount > 0 && ` (${e.companionCount} companion${e.companionCount === 1 ? '' : 's'})`}
+                                      </span>
+                                      {e.checkedIn && (
+                                        <span className="ml-1.5 inline-flex items-center gap-0.5 text-xs text-success">
+                                          <Check className="size-3" aria-hidden /> checked in
+                                        </span>
+                                      )}
+                                    </li>
+                                  ))}
+                                </ul>
+                              ) : (
+                                'None chosen'
+                              ),
+                            },
+                          ]
+                        : []),
                       {
                         label: 'Companions',
                         value: guest.rsvp.companions.length ? (
@@ -173,6 +266,13 @@ export function GuestDetailDrawer({ guestId, onClose }: { guestId: string | null
                 <p className="text-muted">No reply yet.</p>
               )}
             </Section>
+
+            {multiple && events.data && (
+              <Section title="Invited events">
+                {/* Keyed on the saved list so a save (or another admin's) starts from the new list. */}
+                <ExtraEvents key={`${guest.id}:${guest.extraEventIds.join(',')}`} guest={guest} events={events.data} />
+              </Section>
+            )}
 
             <Section
               title="Invitation"
@@ -268,6 +368,7 @@ export function GuestDetailDrawer({ guestId, onClose }: { guestId: string | null
                     <li key={c.id} className="rounded-lg border border-navy/10 px-3 py-2">
                       <div className="flex flex-wrap items-center justify-between gap-2">
                         <span className={c.reversedAt ? 'text-muted line-through' : 'font-medium text-navy'}>
+                          {multiple && `${c.eventName} · `}
                           {formatDateTime(c.checkedInAt)} · party of {c.partySize}
                         </span>
                         {c.reversedAt ? <Badge tone="danger">Reversed</Badge> : <Badge tone="success">Checked in</Badge>}

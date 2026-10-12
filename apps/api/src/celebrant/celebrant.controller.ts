@@ -9,7 +9,7 @@ import { assertPhoto } from '../common/utils/media-ref';
 import { Clean } from '../common/utils/text';
 import { PrismaService } from '../prisma/prisma.service';
 import { AuditService } from '../audit/audit.service';
-import { SettingsService } from '../settings/settings.service';
+import { EventsService } from '../events/events.service';
 import { PUBLIC_MEDIA_SELECT } from '../media/media.mapper';
 import { toAdminCelebrant, toPublicCelebrant } from './celebrant.mapper';
 
@@ -38,7 +38,7 @@ class UpdateCelebrantDto {
 export class CelebrantController {
   constructor(
     private readonly prisma: PrismaService,
-    private readonly settings: SettingsService,
+    private readonly events: EventsService,
     private readonly audit: AuditService,
   ) {}
 
@@ -46,16 +46,16 @@ export class CelebrantController {
   @Public()
   @PublicCacheHeaders()
   async get(): Promise<Celebrant> {
-    const [c, event] = await Promise.all([this.load(), this.settings.getEvent()]);
-    return toPublicCelebrant(c, event.startsAt);
+    const [c, firstStart] = await Promise.all([this.load(), this.events.firstStart()]);
+    return toPublicCelebrant(c, firstStart);
   }
 
   @Get('admin/celebrant')
   @ApiCookieAuth()
   @RequirePermissions('content:manage')
   async getAdmin(): Promise<AdminCelebrant> {
-    const [c, event] = await Promise.all([this.load(), this.settings.getEvent()]);
-    return toAdminCelebrant(c, event.startsAt);
+    const [c, firstStart] = await Promise.all([this.load(), this.events.firstStart()]);
+    return toAdminCelebrant(c, firstStart);
   }
 
   @Put('admin/celebrant')

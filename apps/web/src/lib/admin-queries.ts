@@ -2,6 +2,7 @@ import { queryOptions } from '@tanstack/react-query';
 import type {
   AdminAlbum,
   AdminCelebrant,
+  AdminCelebration,
   AdminEvent,
   AdminFamilyTree,
   AdminGuestListItem,
@@ -42,15 +43,37 @@ export const dashboardQuery = queryOptions({
   queryFn: () => api.get<DashboardStats>('/admin/dashboard'),
 });
 
-export const eventQuery = queryOptions({
-  queryKey: adminKeys.event,
-  queryFn: () => api.get<AdminEvent>('/admin/event'),
+export const celebrationQuery = queryOptions({
+  queryKey: adminKeys.celebration,
+  queryFn: () => api.get<AdminCelebration>('/admin/celebration'),
 });
 
 export const allocationsQuery = queryOptions({
   queryKey: adminKeys.allocations,
-  queryFn: ({ signal }) => api.get<CapacityAllocations>('/admin/event/allocations', undefined, signal),
+  queryFn: ({ signal }) => api.get<CapacityAllocations>('/admin/celebration/allocations', undefined, signal),
 });
+
+/** Every event, public or not, in display order. */
+export const eventsQuery = queryOptions({
+  queryKey: adminKeys.events,
+  queryFn: ({ signal }) => api.get<AdminEvent[]>('/admin/events', undefined, signal),
+  select: sortEvents,
+});
+
+/** Events in the order the admin set (sortOrder, then start). */
+export function sortEvents(events: AdminEvent[]): AdminEvent[] {
+  return events.slice().sort((a, b) => a.sortOrder - b.sortOrder || a.startsAt.localeCompare(b.startsAt));
+}
+
+/**
+ * The event the programme page shows: the one in the URL when it exists, otherwise the first.
+ * Shared by the page and the preload so both ask for the same programme.
+ */
+export function programmeEventId(events: AdminEvent[] | undefined, param: string | null): string | null {
+  if (!events || events.length === 0) return null;
+  if (param && events.some((e) => e.id === param)) return param;
+  return sortEvents(events)[0]!.id;
+}
 
 export const settingsQuery = queryOptions({
   queryKey: adminKeys.settings,
@@ -72,10 +95,12 @@ export const familyQuery = queryOptions({
   queryFn: () => api.get<AdminFamilyTree>('/admin/family'),
 });
 
-export const programmeQuery = queryOptions({
-  queryKey: adminKeys.programme,
-  queryFn: () => api.get<ProgrammeItem[]>('/admin/programme'),
-});
+/** One event's programme items. `eventId` is undefined until an event is chosen. */
+export const programmeQuery = (eventId: string | undefined) =>
+  queryOptions({
+    queryKey: adminKeys.programmeList(eventId ?? ''),
+    queryFn: ({ signal }) => api.get<ProgrammeItem[]>(`/admin/events/${eventId}/programme`, undefined, signal),
+  });
 
 export const albumsQuery = queryOptions({
   queryKey: adminKeys.albums,
@@ -192,6 +217,7 @@ export function guestListParams(search: URLSearchParams) {
   return {
     q: search.get('q') ?? '',
     categoryId: search.get('categoryId') ?? '',
+    eventId: search.get('eventId') ?? '',
     rsvp: pick<GuestRsvpFilter>(search.get('rsvp'), ['ATTENDING', 'DECLINED', 'NONE']),
     checkIn: pick<GuestCheckInFilter>(search.get('checkIn'), ['IN', 'OUT']),
     from: search.get('from') ?? '',
@@ -235,10 +261,12 @@ export const invitationListQuery = (params: InvitationListParams) =>
     queryFn: ({ signal }) => api.get<Paginated<AdminGuestListItem>>('/admin/invitations', { ...params }, signal),
   });
 
-export const checkinOverviewQuery = queryOptions({
-  queryKey: adminKeys.checkinOverview,
-  queryFn: () => api.get<CheckInOverview>('/checkin/recent'),
-});
+/** Counts and recent check-ins for one event; without eventId, for the event the server picks. */
+export const checkinOverviewQuery = (eventId?: string | null) =>
+  queryOptions({
+    queryKey: adminKeys.checkinOverviewFor(eventId ?? null),
+    queryFn: ({ signal }) => api.get<CheckInOverview>('/checkin/recent', eventId ? { eventId } : undefined, signal),
+  });
 
 export interface CheckinListParams {
   page: number;

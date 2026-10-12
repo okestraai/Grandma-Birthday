@@ -10,15 +10,17 @@ import { DataTable, Pagination, type Column } from '@/components/admin/data-tabl
 import { DateCell } from '@/components/admin/misc';
 import { GuestDetailDrawer } from '@/components/admin/guests/GuestDetailDrawer';
 import { GuestFormDialog } from '@/components/admin/guests/GuestFormDialog';
-import { CategoryLabel, InvitationCell, RsvpBadge, useGuestCategories } from '@/components/admin/guests/shared';
+import { CategoryLabel, EventChips, InvitationCell, RsvpBadge, useEvents, useGuestCategories } from '@/components/admin/guests/shared';
 import { ActionGuide } from '@/components/admin/action-guide';
 import { INVITATION_ACTIONS } from '@/components/admin/action-guide-content';
 
-const FILTER_KEYS = ['q', 'categoryId', 'rsvp', 'checkIn', 'from', 'to', 'sort'] as const;
+const FILTER_KEYS = ['q', 'categoryId', 'eventId', 'rsvp', 'checkIn', 'from', 'to', 'sort'] as const;
 
 export default function GuestsPage() {
   const [params, setParams] = useSearchParams();
   const categories = useGuestCategories();
+  const events = useEvents();
+  const multiple = (events.data?.length ?? 0) > 1;
   const [adding, setAdding] = useState(false);
 
   const listParams = guestListParams(params);
@@ -67,7 +69,8 @@ export default function GuestsPage() {
       ),
     },
     { id: 'email', header: 'Email', cell: (g) => <span className="break-all">{g.email}</span> },
-    { id: 'phone', header: 'Phone', hideBelow: 'xl', cell: (g) => g.phone ?? <span className="text-muted">—</span> },
+    // With several events the Events column takes their place; both stay in the guest's details.
+    ...(multiple ? [] : [{ id: 'phone', header: 'Phone', hideBelow: 'xl', cell: (g) => g.phone ?? <span className="text-muted">—</span> } satisfies Column<AdminGuestListItem>]),
     { id: 'category', header: 'Category', hideBelow: 'lg', cell: (g) => <CategoryLabel name={g.categoryName} color={colorFor(g.categoryId)} /> },
     {
       id: 'party',
@@ -81,13 +84,16 @@ export default function GuestsPage() {
       ),
     },
     { id: 'rsvp', header: 'RSVP', cell: (g) => <RsvpBadge response={g.rsvpResponse} /> },
+    ...(multiple
+      ? [{ id: 'events', header: 'Events', hideBelow: 'lg', cell: (g) => <EventChips guestEvents={g.events} events={events.data} /> } satisfies Column<AdminGuestListItem>]
+      : []),
     { id: 'invitation', header: 'Invitation', hideBelow: 'lg', cell: (g) => <InvitationCell invitation={g.invitation} /> },
     {
       id: 'checkedIn',
       header: 'Checked in',
       cell: (g) => (g.checkedInAt ? <DateCell iso={g.checkedInAt} /> : <span className="text-muted">—</span>),
     },
-    { id: 'registered', header: 'Registered', hideBelow: 'xl', cell: (g) => <DateCell iso={g.createdAt} /> },
+    ...(multiple ? [] : [{ id: 'registered', header: 'Registered', hideBelow: 'xl', cell: (g) => <DateCell iso={g.createdAt} /> } satisfies Column<AdminGuestListItem>]),
   ];
 
   const exportQuery = Object.fromEntries(FILTER_KEYS.map((k) => [k, filters[k]]));
@@ -120,6 +126,16 @@ export default function GuestsPage() {
             </option>
           ))}
         </ASelect>
+        {(multiple || filters.eventId) && (
+          <ASelect aria-label="Event" value={filters.eventId} onChange={(e) => update({ eventId: e.target.value })} className="w-full sm:w-48">
+            <option value="">All events</option>
+            {events.data?.map((e) => (
+              <option key={e.id} value={e.id}>
+                Attending {e.name}
+              </option>
+            ))}
+          </ASelect>
+        )}
         <ASelect aria-label="RSVP" value={filters.rsvp} onChange={(e) => update({ rsvp: e.target.value })} className="w-full sm:w-36">
           <option value="">Any RSVP</option>
           <option value="ATTENDING">Attending</option>
@@ -128,8 +144,8 @@ export default function GuestsPage() {
         </ASelect>
         <ASelect aria-label="Check-in" value={filters.checkIn} onChange={(e) => update({ checkIn: e.target.value })} className="w-full sm:w-40">
           <option value="">Any check-in</option>
-          <option value="IN">Checked in</option>
-          <option value="OUT">Not checked in</option>
+          <option value="IN">{filters.eventId ? 'Checked in there' : 'Checked in'}</option>
+          <option value="OUT">{filters.eventId ? 'Not checked in there' : 'Not checked in'}</option>
         </ASelect>
         <AField label="Registered from" htmlFor="guests-from" className="w-[calc(50%-0.25rem)] sm:w-40">
           <AInput id="guests-from" type="date" value={filters.from} max={filters.to || undefined} onChange={(e) => update({ from: e.target.value })} />
@@ -184,6 +200,7 @@ export default function GuestsPage() {
               <span>Party of {g.partySize}</span>
               <span>{g.checkedInAt ? 'Checked in' : 'Not checked in'}</span>
             </span>
+            {multiple && g.events.length > 0 && <EventChips guestEvents={g.events} events={events.data} />}
             <InvitationCell invitation={g.invitation} />
           </button>
         )}

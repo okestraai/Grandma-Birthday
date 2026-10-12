@@ -4,13 +4,16 @@ import type { SiteOverview } from '@birthday/types';
 import { formatEventDate, formatEventTime } from '@/lib/utils';
 import { celebrantName } from '@/lib/public-api';
 import { NAV_LINKS } from './nav';
+import { celebrationDates, eventTimes } from './event/event-helpers';
 import { GoldRule } from './section';
 import { SeventyWatermark } from './seventy';
 import { CountUp, Parallax } from './motion';
 
 export function Footer({ site }: { site: SiteOverview | undefined }) {
-  const event = site?.event;
-  const year = event ? new Date(event.startsAt).getFullYear() : new Date().getFullYear();
+  const celebration = site?.celebration;
+  const events = site?.events ?? [];
+  const [event] = events;
+  const year = celebration ? new Date(celebration.startsAt).getFullYear() : new Date().getFullYear();
 
   return (
     <footer className="no-print relative isolate overflow-hidden bg-navy text-ivory">
@@ -27,39 +30,63 @@ export function Footer({ site }: { site: SiteOverview | undefined }) {
             {site && (
               <>
                 <p className="mt-4 font-display text-2xl leading-snug">{celebrantName(site.celebrant)}</p>
-                <p className="mt-2 max-w-sm text-sm leading-relaxed text-ivory/65">{event?.tagline ?? event?.name}</p>
+                <p className="mt-2 max-w-sm text-sm leading-relaxed text-ivory/65">{celebration?.tagline ?? celebration?.name}</p>
               </>
             )}
             <GoldRule align="left" className="mt-6" />
           </div>
 
-          {event && (
+          {site && celebration && event && (
             <div>
               <h2 className="text-[11px] font-medium uppercase tracking-[0.3em] text-gold">The celebration</h2>
-              <p className="mt-4 text-sm leading-relaxed text-ivory/85">
-                <time dateTime={event.startsAt}>{formatEventDate(event.startsAt, event.timezone)}</time>
-                <br />
-                {formatEventTime(event.startsAt, event.timezone)}
-              </p>
-              <p className="mt-4 flex gap-2 text-sm leading-relaxed text-ivory/85">
-                <MapPin className="mt-0.5 size-4 shrink-0 text-gold" aria-hidden />
-                <span>
-                  {event.venueName}
-                  <br />
-                  <span className="text-ivory/60">{event.address}</span>
-                </span>
-              </p>
-              {(event.contactEmail || event.contactPhone) && (
+              {events.length === 1 ? (
+                <>
+                  <p className="mt-4 text-sm leading-relaxed text-ivory/85">
+                    <time dateTime={event.startsAt}>{formatEventDate(event.startsAt, celebration.timezone)}</time>
+                    <br />
+                    {formatEventTime(event.startsAt, celebration.timezone)}
+                  </p>
+                  <p className="mt-4 flex gap-2 text-sm leading-relaxed text-ivory/85">
+                    <MapPin className="mt-0.5 size-4 shrink-0 text-gold" aria-hidden />
+                    <span>
+                      {event.venueName}
+                      <br />
+                      <span className="text-ivory/60">{event.address}</span>
+                    </span>
+                  </p>
+                </>
+              ) : (
+                <>
+                  <p className="mt-4 text-sm leading-relaxed text-ivory/85">
+                    <time dateTime={celebration.startsAt}>{celebrationDates(site)}</time>
+                  </p>
+                  <ul className="mt-4 space-y-3 text-sm leading-relaxed text-ivory/85">
+                    {events.map((e) => (
+                      <li key={e.id} className="flex gap-2">
+                        <MapPin className="mt-0.5 size-4 shrink-0 text-gold" aria-hidden />
+                        <span>
+                          {e.name}
+                          <br />
+                          <span className="text-ivory/60">
+                            {formatEventDate(e.startsAt, celebration.timezone, { year: undefined })}, {eventTimes(e, celebration.timezone)} · {e.venueName}
+                          </span>
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
+                </>
+              )}
+              {(celebration.contactEmail || celebration.contactPhone) && (
                 <div className="mt-4 space-y-2 text-sm">
-                  {event.contactName && <p className="text-ivory/60">Enquiries: {event.contactName}</p>}
-                  {event.contactEmail && (
-                    <a href={`mailto:${event.contactEmail}`} className="flex items-center gap-2 text-ivory/85 hover:text-gold">
-                      <Mail className="size-4 text-gold" aria-hidden /> {event.contactEmail}
+                  {celebration.contactName && <p className="text-ivory/60">Enquiries: {celebration.contactName}</p>}
+                  {celebration.contactEmail && (
+                    <a href={`mailto:${celebration.contactEmail}`} className="flex items-center gap-2 text-ivory/85 hover:text-gold">
+                      <Mail className="size-4 text-gold" aria-hidden /> {celebration.contactEmail}
                     </a>
                   )}
-                  {event.contactPhone && (
-                    <a href={`tel:${event.contactPhone.replace(/[^\d+]/g, '')}`} className="flex items-center gap-2 text-ivory/85 hover:text-gold">
-                      <Phone className="size-4 text-gold" aria-hidden /> {event.contactPhone}
+                  {celebration.contactPhone && (
+                    <a href={`tel:${celebration.contactPhone.replace(/[^\d+]/g, '')}`} className="flex items-center gap-2 text-ivory/85 hover:text-gold">
+                      <Phone className="size-4 text-gold" aria-hidden /> {celebration.contactPhone}
                     </a>
                   )}
                 </div>

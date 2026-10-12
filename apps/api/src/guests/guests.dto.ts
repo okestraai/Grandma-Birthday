@@ -3,11 +3,12 @@ import { Type } from 'class-transformer';
 import { ArrayMaxSize, IsArray, IsBoolean, IsEmail, IsHexColor, IsIn, IsInt, IsISO8601, IsOptional, IsString, IsUUID, Max, MaxLength, Min, MinLength, ValidateIf, ValidateNested } from 'class-validator';
 import { Clean } from '../common/utils/text';
 import { PaginationQuery } from '../common/utils/pagination';
-import { CompanionDto } from '../rsvp/rsvp.dto';
+import { CompanionDto, RsvpEventChoiceDto } from '../rsvp/rsvp.dto';
 
 export class GuestListQuery extends PaginationQuery {
   @ApiPropertyOptional() @IsOptional() @IsString() @MaxLength(100) q?: string;
   @ApiPropertyOptional() @IsOptional() @IsUUID() categoryId?: string;
+  @ApiPropertyOptional({ description: 'Only guests attending this event; checkIn then refers to it' }) @IsOptional() @IsUUID() eventId?: string;
   @ApiPropertyOptional({ enum: ['ATTENDING', 'DECLINED', 'NONE'] }) @IsOptional() @IsIn(['ATTENDING', 'DECLINED', 'NONE']) rsvp?: 'ATTENDING' | 'DECLINED' | 'NONE';
   @ApiPropertyOptional({ enum: ['IN', 'OUT'] }) @IsOptional() @IsIn(['IN', 'OUT']) checkIn?: 'IN' | 'OUT';
   @ApiPropertyOptional({ description: 'Registered on or after (YYYY-MM-DD or ISO)' }) @IsOptional() @IsISO8601() from?: string;
@@ -19,9 +20,14 @@ export class GuestListQuery extends PaginationQuery {
 export class GuestRsvpDto {
   @ApiProperty({ enum: ['ATTENDING', 'DECLINED'] }) @IsIn(['ATTENDING', 'DECLINED']) response: 'ATTENDING' | 'DECLINED';
   @ApiProperty({ type: [CompanionDto] }) @IsArray() @ArrayMaxSize(20) @ValidateNested({ each: true }) @Type(() => CompanionDto) companions: CompanionDto[];
+  @ApiPropertyOptional({ type: [RsvpEventChoiceDto], description: "Omitted: the guest's current choices, or every event they may attend" })
+  @IsOptional() @IsArray() @ArrayMaxSize(50) @ValidateNested({ each: true }) @Type(() => RsvpEventChoiceDto)
+  events?: RsvpEventChoiceDto[];
   @ApiPropertyOptional() @IsOptional() @Clean({ nullable: true }) @IsString() @MaxLength(500) dietary?: string;
   @ApiPropertyOptional() @IsOptional() @Clean({ nullable: true }) @IsString() @MaxLength(1000) accessibility?: string;
 }
+
+const EXTRA_EVENTS = 'Events to invite the guest to beyond their category (replaces the list)';
 
 export class CreateGuestDto {
   @ApiProperty() @Clean() @IsString() @MinLength(2) @MaxLength(120) fullName: string;
@@ -30,6 +36,7 @@ export class CreateGuestDto {
   @ApiPropertyOptional({ nullable: true }) @IsOptional() @ValidateIf((_, v) => v !== null) @IsUUID() categoryId?: string | null;
   @ApiProperty() @IsInt() @Min(0) @Max(20) allowedCompanions: number;
   @ApiPropertyOptional({ nullable: true }) @IsOptional() @Clean({ nullable: true }) @ValidateIf((_, v) => v !== null) @IsString() @MaxLength(2000) notes?: string | null;
+  @ApiPropertyOptional({ type: [String], description: EXTRA_EVENTS }) @IsOptional() @IsArray() @ArrayMaxSize(50) @IsUUID('all', { each: true }) extraEventIds?: string[];
   @ApiPropertyOptional() @IsOptional() @IsBoolean() sendInvitation?: boolean;
   @ApiPropertyOptional({ type: GuestRsvpDto }) @IsOptional() @ValidateNested() @Type(() => GuestRsvpDto) rsvp?: GuestRsvpDto;
   @ApiPropertyOptional() @IsOptional() @IsBoolean() overrideCapacity?: boolean;
@@ -42,6 +49,7 @@ export class UpdateGuestDto {
   @ApiPropertyOptional({ nullable: true }) @IsOptional() @ValidateIf((_, v) => v !== null) @IsUUID() categoryId?: string | null;
   @ApiPropertyOptional() @IsOptional() @IsInt() @Min(0) @Max(20) allowedCompanions?: number;
   @ApiPropertyOptional({ nullable: true }) @IsOptional() @Clean({ nullable: true }) @ValidateIf((_, v) => v !== null) @IsString() @MaxLength(2000) notes?: string | null;
+  @ApiPropertyOptional({ type: [String], description: EXTRA_EVENTS }) @IsOptional() @IsArray() @ArrayMaxSize(50) @IsUUID('all', { each: true }) extraEventIds?: string[];
   @ApiPropertyOptional({ type: GuestRsvpDto }) @IsOptional() @ValidateNested() @Type(() => GuestRsvpDto) rsvp?: GuestRsvpDto;
   @ApiPropertyOptional() @IsOptional() @IsBoolean() overrideCapacity?: boolean;
 }

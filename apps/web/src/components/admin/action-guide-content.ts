@@ -228,3 +228,56 @@ export const SETTINGS_ACTIONS: ActionGuideRow[] = [
     sees: 'Everyone, after you save.',
   },
 ];
+
+export const EVENT_ACTIONS: ActionGuideRow[] = [
+  {
+    action: 'Add event',
+    does: 'Adds a gathering to the celebration, such as a church service, a dinner or a brunch, with its own date, venue and dress code.',
+    sees: 'Everyone, on the website and the RSVP form, unless the event is hidden.',
+  },
+  {
+    action: 'Edit',
+    does: 'Changes an event’s name, time, venue, guest information, capacity or who is invited. Guests who already replied keep their answer.',
+    sees: 'Everyone who can see the event, and invited guests on their pass.',
+  },
+  {
+    action: 'Delete',
+    does: 'Removes the event and its programme. Not possible for the last event, or once guests have replied to it or been checked in: hide it and turn off its replies instead.',
+    sees: 'Nobody afterwards.',
+  },
+  {
+    action: 'Move up / Move down',
+    does: 'The arrow buttons change the order events are listed in.',
+    sees: 'Everyone: the website, the RSVP form and invitations use this order.',
+  },
+  {
+    action: 'Invited categories',
+    does: 'Only guests in the ticked categories may reply to the event. None ticked means everyone is invited. You can also add one guest to an event from their details on the Guests page.',
+    sees: 'Guests: the RSVP form only offers the events they are invited to.',
+  },
+  {
+    action: 'Capacity (per event)',
+    does: 'The most people at this event. When it is full, guests can no longer choose it. Blank means only the celebration capacity applies.',
+    sees: 'Guests: a full event is marked as full on the RSVP form.',
+  },
+  {
+    action: 'Info only',
+    does: 'Shown when “Guests reply to this event” is off. Guests do not choose the event; it is shown for information, for example a service open to all.',
+    sees: 'Everyone who can see the event.',
+  },
+  {
+    action: 'Hidden',
+    does: 'Shown when “Show on the public website” is off. The event is left off the website and the open RSVP form.',
+    sees: 'Only invited guests, on their personal invitation, and admins.',
+  },
+  {
+    action: 'How guests reply to the events',
+    does: '“Event by event”: guests tick the events they will come to. “Once for everything”: one yes covers every event they are invited to, with all their companions; a full event then refuses the whole reply. Replies already made stay as they are.',
+    sees: 'Guests: the RSVP form either asks which events, or lists the events their reply covers.',
+  },
+  {
+    action: 'Check-in at the door',
+    does: '“At each event”: staff choose the event and check a guest in once per event. “Once for the celebration”: no event to choose, and one check-in counts for every event.',
+    sees: 'Check-in staff: the event buttons appear only for “At each event”.',
+  },
+];

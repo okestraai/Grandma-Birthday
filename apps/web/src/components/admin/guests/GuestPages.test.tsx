@@ -2,7 +2,7 @@ import type { ReactNode } from 'react';
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router';
-import type { AdminGuestDetail, AdminGuestListItem, CheckInRecord, GuestCategory, Paginated } from '@birthday/types';
+import type { AdminEvent, AdminGuestDetail, AdminGuestListItem, CheckInRecord, GuestCategory, Paginated } from '@birthday/types';
 import { toast } from 'sonner';
 import { api, ApiError } from '@/lib/api';
 import GuestsPage from '@/pages/admin/GuestsPage';
@@ -42,6 +42,7 @@ const guest: AdminGuestListItem = {
   rsvpResponse: 'ATTENDING',
   companionCount: 1,
   partySize: 2,
+  events: [{ eventId: 'e1', companionCount: 1, checkedIn: false }],
   invitation: { id: 'i1', code: 'ABC123', status: 'ACTIVE', lastSentAt: '2026-09-20T10:00:00.000Z' },
   checkedInAt: null,
   createdAt: '2026-09-01T10:00:00.000Z',
@@ -50,6 +51,8 @@ const guest: AdminGuestListItem = {
 const detail: AdminGuestDetail = {
   ...guest,
   notes: null,
+  invitedEventIds: ['e1'],
+  extraEventIds: [],
   rsvp: {
     response: 'ATTENDING',
     companions: [{ id: 'k1', fullName: 'Ben Obi', dietary: 'Vegetarian' }],
@@ -77,6 +80,8 @@ const detail: AdminGuestDetail = {
 const checkin: CheckInRecord = {
   id: 'r1',
   invitationId: 'i1',
+  eventId: 'e1',
+  eventName: 'Thanksgiving Service',
   code: 'ABC123',
   guestName: 'Ada Obi',
   categoryName: 'Family',
@@ -87,6 +92,41 @@ const checkin: CheckInRecord = {
   reversedByName: null,
   reverseReason: null,
 };
+
+function event(id: string, name: string, extra: Partial<AdminEvent> = {}): AdminEvent {
+  return {
+    id,
+    slug: id,
+    name,
+    description: null,
+    startsAt: '2026-11-21T09:00:00.000Z',
+    endsAt: '2026-11-21T12:00:00.000Z',
+    venueName: 'Hall',
+    address: '1 Road',
+    city: null,
+    mapUrl: null,
+    latitude: null,
+    longitude: null,
+    dressCode: null,
+    theme: null,
+    parkingInfo: null,
+    rsvpEnabled: true,
+    invitedCategories: [],
+    sortOrder: 0,
+    isPublic: true,
+    capacity: null,
+    invitedCategoryIds: [],
+    attendingGuests: 0,
+    attendingPeople: 0,
+    capacityRemaining: null,
+    checkedInPeople: 0,
+    programmeCount: 0,
+    updatedAt: '2026-09-01T10:00:00.000Z',
+    ...extra,
+  };
+}
+
+let events: AdminEvent[] = [event('e1', 'Thanksgiving Service')];
 
 function page<T>(items: T[]): Paginated<T> {
   return { items, total: items.length, page: 1, pageSize: 25, totalPages: 1 };
@@ -107,10 +147,14 @@ beforeEach(() => {
     if (path === '/admin/rsvp-questions') return [] as never;
     if (path === '/admin/guests/g1') return detail as never;
     if (path === '/admin/checkins') return page([checkin]) as never;
+    if (path === '/admin/events') return events as never;
     return page([guest]) as never;
   });
 });
-afterEach(() => vi.clearAllMocks());
+afterEach(() => {
+  vi.clearAllMocks();
+  events = [event('e1', 'Thanksgiving Service')];
+});
 
 describe('GuestsPage', () => {
   it('lists guests, opens the linked drawer and builds the CSV link from the filters', async () => {
@@ -139,6 +183,55 @@ describe('GuestsPage', () => {
     fireEvent.click(within(dialog).getByRole('checkbox', { name: /override capacity/i }));
     fireEvent.click(within(dialog).getByRole('button', { name: /add and send invitation/i }));
     await waitFor(() => expect(api.post).toHaveBeenLastCalledWith('/admin/guests', expect.objectContaining({ overrideCapacity: true, allowedCompanions: 3, categoryId: 'c1' })));
+  });
+});
+
+describe('GuestsPage with several events', () => {
+  beforeEach(() => {
+    events = [
+      event('e1', 'Thanksgiving Service', { sortOrder: 0 }),
+      event('e2', 'Birthday Dinner', { sortOrder: 1, invitedCategoryIds: ['c2'] }),
+      event('e3', 'Family Brunch', { sortOrder: 2, invitedCategoryIds: ['c1'] }),
+    ];
+  });
+
+  it('filters by event and shows each guest’s events', async () => {
+    renderAt(<GuestsPage />, '/admin/guests');
+    const table = await screen.findByRole('table', { name: 'Guests' });
+    expect(await within(table).findByTitle('Thanksgiving Service: 2 people')).toBeInTheDocument();
+    fireEvent.change(screen.getByRole('combobox', { name: 'Event' }), { target: { value: 'e2' } });
+    await waitFor(() => expect(api.get).toHaveBeenLastCalledWith('/admin/guests', expect.objectContaining({ eventId: 'e2' }), expect.anything()));
+  });
+
+  it('adds a guest to an event beyond their category', async () => {
+    vi.mocked(api.put).mockResolvedValueOnce({ ...detail, extraEventIds: ['e2'] } as never);
+    renderAt(<GuestsPage />, '/admin/guests?guest=g1');
+    const dialog = await screen.findByRole('dialog');
+    // Family (c1) is invited to the service (everyone) and the brunch; the dinner is for c2 only.
+    expect(await within(dialog).findByText('Thanksgiving Service, Family Brunch')).toBeInTheDocument();
+    fireEvent.click(within(dialog).getByRole('checkbox', { name: 'Birthday Dinner' }));
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Save invited events' }));
+    await waitFor(() => expect(api.put).toHaveBeenCalledWith('/admin/guests/g1', { extraEventIds: ['e2'] }));
+  });
+
+  it('records an RSVP for some events only', async () => {
+    vi.mocked(api.post).mockResolvedValueOnce(detail as never);
+    renderAt(<GuestsPage />, '/admin/guests');
+    fireEvent.click((await screen.findAllByRole('button', { name: /add guest/i }))[0]);
+    const dialog = await screen.findByRole('dialog');
+    fireEvent.change(within(dialog).getByLabelText(/full name/i), { target: { value: 'New Person' } });
+    fireEvent.change(within(dialog).getByLabelText(/^email/i), { target: { value: 'new@example.com' } });
+    fireEvent.change(within(dialog).getByLabelText(/^category/i), { target: { value: 'c1' } });
+    fireEvent.click(within(dialog).getByRole('switch', { name: /record rsvp/i }));
+    fireEvent.click(await within(dialog).findByRole('checkbox', { name: 'Family Brunch' }));
+    expect(within(dialog).queryByRole('checkbox', { name: 'Birthday Dinner' })).not.toBeInTheDocument();
+    fireEvent.click(within(dialog).getByRole('button', { name: /add and send invitation/i }));
+    await waitFor(() =>
+      expect(api.post).toHaveBeenCalledWith(
+        '/admin/guests',
+        expect.objectContaining({ rsvp: expect.objectContaining({ response: 'ATTENDING', events: [{ eventId: 'e1', companionCount: 0 }] }) }),
+      ),
+    );
   });
 });
 

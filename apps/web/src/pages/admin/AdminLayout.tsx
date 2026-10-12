@@ -85,7 +85,7 @@ export const NAV_GROUPS: { label: string; items: NavItem[] }[] = [
   {
     label: 'Event',
     items: [
-      { to: '/admin/event', label: 'Event', icon: CalendarDays, permission: 'event:manage' },
+      { to: '/admin/event', label: 'Events', icon: CalendarDays, permission: 'event:manage' },
       { to: '/admin/programme', label: 'Programme', icon: ListOrdered, permission: 'event:manage' },
     ],
   },

@@ -9,6 +9,8 @@ export const LOCK_KEYS = {
   capacity: 70_001,
   /** Storage quota: every stored upload. */
   storage: 70_002,
+  /** Check-ins when one check-in covers the whole celebration (the unique index is per event). */
+  checkIn: 70_003,
 } as const;
 
 @Injectable()

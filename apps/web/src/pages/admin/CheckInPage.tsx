@@ -11,6 +11,7 @@ import { Meter } from '@/components/admin/misc';
 import { QrScannerView } from '@/components/admin/checkin/QrScannerView';
 import { CodeEntry, NameSearch } from '@/components/admin/checkin/ManualLookup';
 import { CheckInResultCard, announcementFor, formatTimeOfDay, guestsLabel, type CheckInView } from '@/components/admin/checkin/CheckInResultCard';
+import { EventPicker, OtherEvents, readCheckInEvent, saveCheckInEvent } from '@/components/admin/checkin/EventPicker';
 
 type Mode = 'scan' | 'code' | 'search';
 
@@ -79,11 +80,20 @@ export default function CheckInPage() {
   const lastValue = useRef<string>('');
   const busy = useRef(false);
 
-  const overview = useQuery({
-    ...checkinOverviewQuery,
-    refetchInterval: 15_000,
-    refetchOnWindowFocus: true,
-  });
+  // Without an eventId the server picks the event in progress (or next, or last) and lists them all.
+  const live = { refetchInterval: 15_000, refetchOnWindowFocus: true } as const;
+  const base = useQuery({ ...checkinOverviewQuery(), ...live });
+  const [choice, setChoice] = useState<string | null>(readCheckInEvent);
+  const events = base.data?.events ?? [];
+  const defaultId = base.data?.eventId;
+  // Checked in once for the whole celebration: no event to choose; the server records the right one.
+  const once = base.data?.checkInScope === 'ONCE';
+  const eventId = !once && choice && events.some((e) => e.eventId === choice) ? choice : defaultId;
+  const chosen = useQuery({ ...checkinOverviewQuery(eventId), ...live, enabled: !!eventId && eventId !== defaultId });
+  const overview = eventId && eventId !== defaultId ? chosen : base;
+  const multiple = !once && events.length > 1;
+  const eventIdRef = useRef(eventId);
+  eventIdRef.current = eventId;
 
   const refreshCounts = useCallback(() => {
     void Promise.all(affects.checkins.map((queryKey) => queryClient.invalidateQueries({ queryKey })));
@@ -96,7 +106,8 @@ export default function CheckInPage() {
     lastValue.current = value;
     setView({ kind: 'verifying', value });
     try {
-      const result = await api.post<CheckInVerifyResult>('/checkin/verify', { value });
+      const eventId = eventIdRef.current;
+      const result = await api.post<CheckInVerifyResult>('/checkin/verify', eventId ? { value, eventId } : { value });
       setView({ kind: 'result', result });
       vibrate(result.status === 'VALID' ? 80 : [120, 80, 120]);
     } catch (error) {
@@ -123,7 +134,13 @@ export default function CheckInPage() {
     const guest = view.result.guest;
     setCheckingIn(true);
     try {
-      const body: CheckInRequest = { invitationId: guest.invitationId, partySize, deviceInfo: navigator.userAgent.slice(0, 200) };
+      const body: CheckInRequest = {
+        invitationId: guest.invitationId,
+        // The event the result was verified for, even if the picker changed since.
+        eventId: view.result.event.id,
+        partySize,
+        deviceInfo: navigator.userAgent.slice(0, 200),
+      };
       const record = await api.post<CheckInRecord>('/checkin', body);
       setView({ kind: 'done', record });
       vibrate([60, 40, 60]);
@@ -141,6 +158,13 @@ export default function CheckInPage() {
     }
   };
 
+  const selectEvent = (id: string) => {
+    if (id === eventId) return;
+    saveCheckInEvent(id);
+    setChoice(id);
+    setView(null);
+  };
+
   const reset = () => {
     setView(null);
     // Allow the same code to be scanned again deliberately after "Scan next guest".
@@ -156,6 +180,12 @@ export default function CheckInPage() {
   return (
     <div className="mx-auto max-w-5xl">
       <PageHeader title="Check-In" description="Scan invitation QR codes at the door. Use the code or name search if a QR will not scan." />
+      {multiple && (
+        <div className="mb-3">
+          <p className="mb-1 text-[13px] font-medium text-navy">Checking guests in to</p>
+          <EventPicker events={events} value={eventId} onChange={selectEvent} />
+        </div>
+      )}
       <p className="sr-only" aria-live="assertive" role="status">
         {announcementFor(view)}
       </p>
@@ -173,6 +203,7 @@ export default function CheckInPage() {
               checkingIn={checkingIn}
               onReset={reset}
               onRetry={view.kind === 'error' ? () => void verify(lastValue.current) : undefined}
+              showEvent={multiple}
             />
           )}
           {/* Kept mounted while a result shows so the camera only pauses instead of restarting. */}
@@ -202,7 +233,11 @@ export default function CheckInPage() {
                   <QrScannerView active={mode === 'scan' && !view} onScan={onScan} />
                 ) : (
                   <div className="rounded-2xl border border-navy/10 bg-white p-4">
-                    {mode === 'code' ? <CodeEntry onVerify={(v) => void verify(v)} /> : <NameSearch onVerify={(v) => void verify(v)} />}
+                    {mode === 'code' ? (
+                      <CodeEntry onVerify={(v) => void verify(v)} />
+                    ) : (
+                      <NameSearch onVerify={(v) => void verify(v)} eventId={eventId} showEventStatus={multiple} />
+                    )}
                   </div>
                 )}
               </div>
@@ -231,6 +266,7 @@ export default function CheckInPage() {
               <RecentList records={overview.data?.recent ?? []} />
             )}
           </section>
+          {multiple && <OtherEvents events={(overview.data?.events ?? events).filter((e) => e.eventId !== eventId)} onSelect={selectEvent} />}
         </aside>
       </div>
     </div>

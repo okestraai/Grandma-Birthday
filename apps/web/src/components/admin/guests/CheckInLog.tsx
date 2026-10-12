@@ -4,7 +4,7 @@ import { Undo2 } from 'lucide-react';
 import type { CheckInRecord, ReverseCheckInRequest } from '@birthday/types';
 import { api } from '@/lib/api';
 import { affects, useAdminMutation } from '@/lib/admin-api';
-import { DEFAULT_CHECKIN_LIST_PARAMS, checkinListQuery } from '@/lib/admin-queries';
+import { DEFAULT_CHECKIN_LIST_PARAMS, checkinListQuery, eventsQuery } from '@/lib/admin-queries';
 import { useAuth } from '@/lib/auth';
 import { Badge } from '@/components/ui/badge';
 import { formatDateTime } from '@/lib/utils';
@@ -30,6 +30,8 @@ function StatusCell({ record }: { record: CheckInRecord }) {
 export function CheckInLog() {
   const { can } = useAuth();
   const canReverse = can('checkin:reverse');
+  const events = useQuery({ ...eventsQuery, enabled: can('event:manage') });
+  const multiple = (events.data?.length ?? 0) > 1;
   const [includeReversed, setIncludeReversed] = useState(DEFAULT_CHECKIN_LIST_PARAMS.includeReversed);
   const [page, setPage] = useState(DEFAULT_CHECKIN_LIST_PARAMS.page);
   const [pageSize, setPageSize] = useState(DEFAULT_CHECKIN_LIST_PARAMS.pageSize);
@@ -48,6 +50,7 @@ export function CheckInLog() {
   const columns: Column<CheckInRecord>[] = [
     { id: 'time', header: 'Time', cell: (r) => <DateCell iso={r.checkedInAt} /> },
     { id: 'guest', header: 'Guest', cell: (r) => <span className="font-medium text-navy">{r.guestName}</span> },
+    ...(multiple ? [{ id: 'event', header: 'Event', cell: (r) => r.eventName } satisfies Column<CheckInRecord>] : []),
     { id: 'code', header: 'Code', cell: (r) => <span className="font-mono text-xs">{r.code}</span> },
     { id: 'category', header: 'Category', hideBelow: 'lg', cell: (r) => r.categoryName ?? <span className="text-muted">—</span> },
     { id: 'party', header: 'Party', className: 'tabular-nums', cell: (r) => r.partySize },
@@ -106,6 +109,7 @@ export function CheckInLog() {
               <div>
                 <p className="font-medium text-navy">{r.guestName}</p>
                 <p className="text-xs text-muted">
+                  {multiple && `${r.eventName} · `}
                   <span className="font-mono">{r.code}</span> · party of {r.partySize}
                   {r.categoryName && ` · ${r.categoryName}`}
                 </p>

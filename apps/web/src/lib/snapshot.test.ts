@@ -49,7 +49,7 @@ describe('isSnapshotKey', () => {
 describe('parseSnapshot', () => {
   it('drops malformed, disallowed and old entries', () => {
     const text = JSON.stringify({
-      v: 1,
+      v: 2,
       entries: [
         { key: ['public', 'site'], data: { ok: 1 }, updatedAt: NOW - 1000 },
         { key: ['public', 'invitation', 'secret'], data: { name: 'Ada' }, updatedAt: NOW },
@@ -69,7 +69,7 @@ describe('parseSnapshot', () => {
   });
 
   it('reads the snapshot the web server injects, including escaped "<"', () => {
-    injected(JSON.stringify({ v: 1, entries: [{ key: ['public', 'site'], data: { t: '</script><b>' }, updatedAt: NOW }] }).replace(/</g, '\\u003c'));
+    injected(JSON.stringify({ v: 2, entries: [{ key: ['public', 'site'], data: { t: '</script><b>' }, updatedAt: NOW }] }).replace(/</g, '\\u003c'));
     expect(readInjectedSnapshot(NOW)).toEqual([{ key: ['public', 'site'], data: { t: '</script><b>' }, updatedAt: NOW }]);
   });
 });
@@ -103,7 +103,7 @@ describe('seeding', () => {
     window.localStorage.setItem(
       SNAPSHOT_STORAGE_KEY,
       JSON.stringify({
-        v: 1,
+        v: 2,
         entries: [
           { key: ['public', 'site'], data: 'stored-site', updatedAt: NOW - 100 },
           { key: ['public', 'albums'], data: 'stored-albums', updatedAt: NOW - 10_000 },
@@ -112,7 +112,7 @@ describe('seeding', () => {
     );
     injected(
       JSON.stringify({
-        v: 1,
+        v: 2,
         entries: [
           { key: ['public', 'site'], data: 'server-site', updatedAt: NOW - 10_000 },
           { key: ['public', 'albums'], data: 'server-albums', updatedAt: NOW - 100 },
@@ -126,7 +126,7 @@ describe('seeding', () => {
   });
 
   it('does nothing on admin pages', () => {
-    injected(JSON.stringify({ v: 1, entries: [{ key: ['public', 'site'], data: 'x', updatedAt: NOW }] }));
+    injected(JSON.stringify({ v: 2, entries: [{ key: ['public', 'site'], data: 'x', updatedAt: NOW }] }));
     const qc = client();
     restorePublicSnapshot(qc, '/admin/guests');
     expect(qc.getQueryCache().getAll()).toHaveLength(0);
@@ -156,7 +156,7 @@ describe('persisting', () => {
   });
 
   it('skips writing a snapshot that is too large', () => {
-    expect(writeSnapshot({ v: 1, entries: [{ key: ['public', 'site'], data: 'x'.repeat(SNAPSHOT_MAX_BYTES), updatedAt: NOW }] })).toBe(false);
+    expect(writeSnapshot({ v: 2, entries: [{ key: ['public', 'site'], data: 'x'.repeat(SNAPSHOT_MAX_BYTES), updatedAt: NOW }] })).toBe(false);
     expect(window.localStorage.getItem(SNAPSHOT_STORAGE_KEY)).toBeNull();
   });
 
@@ -164,7 +164,7 @@ describe('persisting', () => {
     const spy = vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => {
       throw new Error('QuotaExceededError');
     });
-    expect(writeSnapshot({ v: 1, entries: [] })).toBe(false);
+    expect(writeSnapshot({ v: 2, entries: [] })).toBe(false);
     spy.mockRestore();
     const get = vi.spyOn(Storage.prototype, 'getItem').mockImplementation(() => {
       throw new Error('SecurityError');

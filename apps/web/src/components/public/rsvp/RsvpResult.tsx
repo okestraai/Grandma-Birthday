@@ -4,6 +4,7 @@ import { Download, MailCheck, MailWarning } from 'lucide-react';
 import type { SubmitRsvpResult } from '@birthday/types';
 import { Button } from '@/components/ui/button';
 import { apiUrl } from '@/lib/api';
+import { formatEventDate, formatEventTime } from '@/lib/utils';
 import { GoldRule } from '../section';
 import { EventContact } from './notices';
 import { RsvpCard, StepHeading } from './parts';
@@ -24,7 +25,32 @@ function TributeNote({ status }: { status: SubmitRsvpResult['tributeStatus'] }) 
   );
 }
 
-export function RsvpResult({ result, email, event }: { result: SubmitRsvpResult; email: string; event?: Contact }) {
+/** The events the guest will attend, when there is more than one. */
+function ChosenEvents({ events, timezone }: { events: SubmitRsvpResult['events']; timezone?: string }) {
+  if (events.length < 2) return null;
+  return (
+    <div className="mx-auto mt-6 max-w-md text-left">
+      <h3 className="text-center text-[11px] font-medium uppercase tracking-[0.22em] text-muted">Your events</h3>
+      <ul className="mt-3 divide-y divide-gold/25 rounded-2xl border border-gold/30 bg-ivory">
+        {events.map((event) => (
+          <li key={event.id} className="flex items-baseline justify-between gap-4 px-4 py-3">
+            <span>
+              <span className="block font-display text-[17px] text-navy">{event.name}</span>
+              <span className="block text-sm text-muted">
+                {formatEventDate(event.startsAt, timezone, { year: undefined })} · {formatEventTime(event.startsAt, timezone)} · {event.venueName}
+              </span>
+            </span>
+            <span className="shrink-0 text-sm text-navy">
+              {event.partySize} {event.partySize === 1 ? 'guest' : 'guests'}
+            </span>
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
+export function RsvpResult({ result, email, event, timezone }: { result: SubmitRsvpResult; email: string; event?: Contact; timezone?: string }) {
   if (result.response === 'DECLINED') {
     return (
       <RsvpCard>
@@ -84,6 +110,7 @@ export function RsvpResult({ result, email, event }: { result: SubmitRsvpResult;
             <dd className="mt-1 font-display text-2xl tracking-[0.12em] text-navy">{result.invitationCode ?? '—'}</dd>
           </div>
         </motion.dl>
+        <ChosenEvents events={result.events} timezone={timezone} />
 
         <p className="mx-auto mt-5 flex max-w-md items-start justify-center gap-2 text-sm text-muted">
           {result.emailSent ? (

@@ -1,29 +1,168 @@
 import { useFieldArray, useFormContext } from 'react-hook-form';
 import { AnimatePresence, motion } from 'motion/react';
-import { Minus, Plus } from 'lucide-react';
+import { Check, Minus, Plus } from 'lucide-react';
+import type { RsvpEventOption } from '@birthday/types';
 import { Button } from '@/components/ui/button';
 import { Field, Input } from '@/components/ui/input';
-import { cn } from '@/lib/utils';
+import { cn, formatEventDate } from '@/lib/utils';
 import { EASE } from '../reveal';
+import { eventTimes } from '../event/event-helpers';
 import { StepHeading } from './parts';
 import type { RsvpValues } from './schema';
+
+/**
+ * Tick boxes for the events the guest will attend, each with how many of their companions come.
+ * Shown only when more than one event is offered. A full event can be kept but not newly ticked.
+ */
+export function EventChoices({ events, timezone, allowCompanions }: { events: RsvpEventOption[]; timezone?: string; allowCompanions: boolean }) {
+  const {
+    watch,
+    setValue,
+    formState: { errors },
+  } = useFormContext<RsvpValues>();
+  const choices = watch('events');
+  const named = allowCompanions ? watch('companions').length : 0;
+  const error = errors.events?.message ?? errors.events?.root?.message;
+
+  const update = (eventId: string, change: Partial<RsvpValues['events'][number]>) => {
+    const next = choices.map((c) => (c.eventId === eventId ? { ...c, ...change } : c));
+    if (!next.some((c) => c.eventId === eventId)) next.push({ eventId, selected: false, companionCount: null, ...change });
+    setValue('events', next, { shouldValidate: Boolean(errors.events), shouldDirty: true });
+  };
+
+  return (
+    <fieldset aria-describedby={error ? 'rsvp-events-msg' : 'rsvp-events-hint'} className="rounded-2xl border border-gold/25 bg-cream/60 px-5 py-5 sm:px-6">
+      <legend className="sr-only">Which events will you attend?</legend>
+      <h3 aria-hidden className="font-display text-lg text-navy">
+        Which events will you attend?
+      </h3>
+      <p id="rsvp-events-hint" className="mt-0.5 text-sm text-muted">
+        Tick each one you will come to.
+      </p>
+      <ul className="mt-4 space-y-3">
+        {events.map((event) => {
+          const choice = choices.find((c) => c.eventId === event.id);
+          const selected = Boolean(choice?.selected);
+          const blocked = event.full && !selected;
+          const count = Math.min(choice?.companionCount ?? named, named);
+          return (
+            <li key={event.id}>
+              <label
+                className={cn(
+                  'flex min-h-11 items-start gap-3 rounded-xl border bg-ivory px-4 py-3 transition-colors duration-300',
+                  'has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-gold/50',
+                  selected ? 'border-gold-rich' : 'border-navy/10',
+                  blocked ? 'cursor-not-allowed opacity-60' : 'cursor-pointer hover:border-gold/60',
+                )}
+              >
+                <input
+                  type="checkbox"
+                  className="peer sr-only"
+                  checked={selected}
+                  disabled={blocked}
+                  onChange={(e) => update(event.id, { selected: e.target.checked })}
+                />
+                <span
+                  aria-hidden
+                  className={cn(
+                    'mt-0.5 flex size-5 shrink-0 items-center justify-center rounded-md border transition-colors',
+                    selected ? 'border-gold-rich bg-gold-rich text-ivory' : 'border-navy/25 bg-white',
+                  )}
+                >
+                  {selected && <Check className="size-3.5" />}
+                </span>
+                <span className="min-w-0 flex-1">
+                  <span className="block font-display text-[17px] leading-snug text-navy">{event.name}</span>
+                  <span className="block text-sm text-charcoal/80">
+                    {formatEventDate(event.startsAt, timezone, { year: undefined })} · {eventTimes(event, timezone)}
+                  </span>
+                  <span className="block text-sm text-muted">
+                    {event.venueName}
+                    {event.city ? `, ${event.city}` : ''}
+                  </span>
+                  {blocked && <span className="mt-1 block text-xs font-medium uppercase tracking-[0.18em] text-error">Full</span>}
+                </span>
+              </label>
+              {selected && named > 0 && (
+                <div className="mt-2 flex flex-wrap items-center justify-end gap-2 pr-1 text-sm text-navy">
+                  <label htmlFor={`rsvp-event-${event.id}-companions`}>Accompanying guests at {event.name}</label>
+                  <select
+                    id={`rsvp-event-${event.id}-companions`}
+                    className="h-11 rounded-full border border-navy/15 bg-white px-4 text-sm text-navy focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gold/50"
+                    value={count}
+                    onChange={(e) => update(event.id, { companionCount: Number(e.target.value) === named ? null : Number(e.target.value) })}
+                  >
+                    {Array.from({ length: named + 1 }, (_, n) => (
+                      <option key={n} value={n}>
+                        {n === named ? `All ${n}` : n}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
+            </li>
+          );
+        })}
+      </ul>
+      {error && (
+        <p id="rsvp-events-msg" role="alert" className="mt-3 text-sm text-error">
+          {error}
+        </p>
+      )}
+    </fieldset>
+  );
+}
 
 const CHOICES = [
   { value: 'ATTENDING', title: 'Joyfully accepts', note: 'I will be there to celebrate.' },
   { value: 'DECLINED', title: 'Regretfully declines', note: 'I cannot attend, but send my love.' },
 ] as const;
 
+/** The events a whole-celebration reply covers, shown for information. */
+export function EventsCovered({ events, timezone }: { events: RsvpEventOption[]; timezone?: string }) {
+  return (
+    <section aria-labelledby="rsvp-events-covered" className="rounded-2xl border border-gold/25 bg-cream/60 px-5 py-5 sm:px-6">
+      <h3 id="rsvp-events-covered" className="font-display text-lg text-navy">
+        Your reply covers these events
+      </h3>
+      <p className="mt-0.5 text-sm text-muted">You and your guests are expected at each of them.</p>
+      <ul className="mt-4 divide-y divide-navy/10 rounded-xl border border-navy/10 bg-ivory">
+        {events.map((event) => (
+          <li key={event.id} className="px-4 py-3">
+            <span className="block font-display text-[17px] leading-snug text-navy">{event.name}</span>
+            <span className="block text-sm text-charcoal/80">
+              {formatEventDate(event.startsAt, timezone, { year: undefined })} · {eventTimes(event, timezone)}
+            </span>
+            <span className="block text-sm text-muted">
+              {event.venueName}
+              {event.city ? `, ${event.city}` : ''}
+            </span>
+          </li>
+        ))}
+      </ul>
+    </section>
+  );
+}
+
 export function StepGuests({
   focusOnMount,
   allowCompanions,
   limit,
   serverError,
+  events = [],
+  timezone,
+  wholeCelebration = false,
 }: {
   focusOnMount: boolean;
   allowCompanions: boolean;
   limit: number;
   /** COMPANION_LIMIT_EXCEEDED from the server. */
   serverError?: string | null;
+  /** The events this guest is offered; the tick boxes show only when there are several. */
+  events?: RsvpEventOption[];
+  timezone?: string;
+  /** One yes covers every event: list them instead of asking. */
+  wholeCelebration?: boolean;
 }) {
   const {
     register,
@@ -189,6 +328,9 @@ export function StepGuests({
           </motion.section>
         )}
       </AnimatePresence>
+
+      {attending && events.length > 1 && !wholeCelebration && <EventChoices events={events} timezone={timezone} allowCompanions={allowCompanions} />}
+      {attending && events.length > 1 && wholeCelebration && <EventsCovered events={events} timezone={timezone} />}
 
       {response === 'DECLINED' && (
         <p className="text-center font-display text-[15px] italic text-muted">

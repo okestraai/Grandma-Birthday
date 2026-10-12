@@ -9,13 +9,15 @@ import { ErrorState } from '@/components/ui/states';
 import { isApiError } from '@/lib/api';
 import { siteNameOf, useInvitePrefill, useRsvpForm, useSite } from '@/lib/public-api';
 import { formatEventDate } from '@/lib/utils';
+import { celebrationDates } from '@/components/public/event/event-helpers';
 
 const INVALID_INVITE: ApiErrorCode[] = ['INVITATION_NOT_FOUND', 'INVITATION_REVOKED', 'INVITATION_EXPIRED', 'NOT_FOUND'];
 
 function describe(site: SiteOverview | undefined): string | undefined {
   if (!site) return undefined;
-  const { event } = site;
-  return `Kindly reply to the invitation to ${event.name} on ${formatEventDate(event.startsAt, event.timezone)} at ${event.venueName}.`;
+  const { celebration, events } = site;
+  const where = events.length === 1 ? ` at ${events[0].venueName}` : '';
+  return `Kindly reply to the invitation to ${celebration.name} on ${celebrationDates(site)}${where}.`;
 }
 
 export default function RsvpPage() {
@@ -26,7 +28,7 @@ export default function RsvpPage() {
   const formQuery = useRsvpForm();
   const invite = useInvitePrefill(inviteToken);
 
-  const event = site.data?.event;
+  const event = site.data?.celebration;
   const config = formQuery.data;
   const deadline = config?.availability.open ? config.availability.deadline : null;
 

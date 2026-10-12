@@ -4,6 +4,7 @@ import { celebrantName } from '@/lib/public-api';
 import { Skeleton } from '@/components/ui/skeleton';
 import { cn, formatEventDate, formatEventTime } from '@/lib/utils';
 import { Eyebrow, GoldRule } from '../section';
+import { celebrationDates, celebrationPlace } from '../event/event-helpers';
 
 /**
  * Step or result heading. Focusable (tabIndex -1) so focus can move to it when the
@@ -45,22 +46,34 @@ export function StepHeading({
 
 /** The formal invitation wording at the top of the card, from the site data. */
 export function InvitationHeader({ site, className }: { site: SiteOverview; className?: string }) {
-  const { event } = site;
+  const { celebration, events } = site;
   const name = celebrantName(site.celebrant);
+  const [only] = events.length === 1 ? events : [];
   return (
     <div className={cn('text-center', className)}>
       <p className="text-[11px] font-medium uppercase tracking-[0.3em] text-gold-rich">The family of</p>
       <p className="mt-2 font-display text-2xl leading-snug text-navy sm:text-3xl">{name}</p>
       <p className="mx-auto mt-3 max-w-sm font-display text-[15px] italic leading-relaxed text-charcoal/80 sm:text-base">
-        requests the pleasure of your company at {event.name}
+        requests the pleasure of your company at {celebration.name}
       </p>
       <GoldRule className="mt-5" />
-      <p className="mt-4 text-sm text-navy">
-        <time dateTime={event.startsAt}>
-          {formatEventDate(event.startsAt, event.timezone)} · {formatEventTime(event.startsAt, event.timezone)}
-        </time>
-      </p>
-      <p className="mt-1 text-sm text-muted">{[event.venueName, event.city].filter(Boolean).join(', ')}</p>
+      {only ? (
+        <>
+          <p className="mt-4 text-sm text-navy">
+            <time dateTime={only.startsAt}>
+              {formatEventDate(only.startsAt, celebration.timezone)} · {formatEventTime(only.startsAt, celebration.timezone)}
+            </time>
+          </p>
+          <p className="mt-1 text-sm text-muted">{[only.venueName, only.city].filter(Boolean).join(', ')}</p>
+        </>
+      ) : (
+        <>
+          <p className="mt-4 text-sm text-navy">
+            <time dateTime={celebration.startsAt}>{celebrationDates(site)}</time>
+          </p>
+          {events.length > 1 && <p className="mt-1 text-sm text-muted">{celebrationPlace(site)}</p>}
+        </>
+      )}
     </div>
   );
 }

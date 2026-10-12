@@ -32,14 +32,16 @@ export function personJsonLd(celebrant: Celebrant): Record<string, unknown> {
   };
 }
 
-export function eventJsonLd(site: SiteOverview): Record<string, unknown> {
-  const { event } = site;
+/** One schema.org Event per public event. With several, each names the celebration and links to its card. */
+export function eventJsonLd(site: SiteOverview): Record<string, unknown>[] {
+  const { celebration, events } = site;
   const image = absolute(siteImagePath(site));
-  return {
+  const several = events.length > 1;
+  return events.map((event) => ({
     '@context': 'https://schema.org',
     '@type': 'Event',
-    name: event.name,
-    description: event.description ?? event.tagline ?? `A celebration of ${celebrantName(site.celebrant)}.`,
+    name: several ? `${event.name}: ${celebration.name}` : event.name,
+    description: event.description ?? celebration.description ?? celebration.tagline ?? `A celebration of ${celebrantName(site.celebrant)}.`,
     startDate: event.startsAt,
     endDate: event.endsAt,
     eventStatus: 'https://schema.org/EventScheduled',
@@ -57,15 +59,15 @@ export function eventJsonLd(site: SiteOverview): Record<string, unknown> {
         : {}),
     },
     ...(image ? { image: [image] } : {}),
-    ...(event.contactName
+    ...(celebration.contactName
       ? {
           organizer: {
             '@type': 'Person',
-            name: event.contactName,
-            ...(event.contactEmail ? { email: event.contactEmail } : {}),
+            name: celebration.contactName,
+            ...(celebration.contactEmail ? { email: celebration.contactEmail } : {}),
           },
         }
       : {}),
-    url: `${SITE_URL}/event`,
-  };
+    url: several ? `${SITE_URL}/event#${event.slug}` : `${SITE_URL}/event`,
+  }));
 }

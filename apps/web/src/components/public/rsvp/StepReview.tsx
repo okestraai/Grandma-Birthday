@@ -2,8 +2,9 @@ import type { ReactNode } from 'react';
 import { useFormContext } from 'react-hook-form';
 import { PencilLine } from 'lucide-react';
 import type { PublicGuestCategory, RsvpQuestion } from '@birthday/types';
+import { formatEventDate } from '@/lib/utils';
 import { ReviewRow, StepHeading } from './parts';
-import { partySize, type RsvpStep, type RsvpValues } from './schema';
+import { chosenEvents, visibleEvents, partySize, type RsvpSchemaContext, type RsvpStep, type RsvpValues } from './schema';
 
 function Section({ title, step, onEdit, children }: { title: string; step: RsvpStep; onEdit: (step: RsvpStep) => void; children: ReactNode }) {
   const headingId = `rsvp-review-${step}`;
@@ -36,6 +37,8 @@ export function StepReview({
   categories,
   invitedAs,
   questions,
+  schemaContext,
+  timezone,
 }: {
   focusOnMount: boolean;
   onEdit: (step: RsvpStep) => void;
@@ -43,6 +46,9 @@ export function StepReview({
   categories: PublicGuestCategory[] | null;
   invitedAs: string | null;
   questions: RsvpQuestion[];
+  /** Which events the guest is offered; the chosen ones are listed when there are several. */
+  schemaContext?: Pick<RsvpSchemaContext, 'config' | 'events' | 'invited'>;
+  timezone?: string;
 }) {
   const { watch } = useFormContext<RsvpValues>();
   const values = watch();
@@ -74,6 +80,21 @@ export function StepReview({
           {attending && (
             <ReviewRow label="Party">
               {size} {size === 1 ? 'person' : 'people'}
+            </ReviewRow>
+          )}
+          {attending && schemaContext && visibleEvents(schemaContext, values.categoryId).length > 1 && (
+            <ReviewRow label="Events">
+              <ul className="space-y-1">
+                {chosenEvents(values, schemaContext).map(({ event, companionCount }) => (
+                  <li key={event.id}>
+                    {event.name}
+                    <span className="text-muted">
+                      {' '}
+                      · {formatEventDate(event.startsAt, timezone, { year: undefined })} · {1 + companionCount} {companionCount === 0 ? 'person' : 'people'}
+                    </span>
+                  </li>
+                ))}
+              </ul>
             </ReviewRow>
           )}
           {attending && allowCompanions && values.companions.length > 0 && (

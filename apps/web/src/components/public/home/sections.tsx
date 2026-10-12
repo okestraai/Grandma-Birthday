@@ -14,7 +14,7 @@ import { SeventyWatermark } from '../seventy';
 import { CATEGORY_LABELS, pickHighlights, sortTimeline } from '../timeline/categories';
 import { EventDetails } from '../event/EventDetails';
 import { AddToCalendar } from '../event/AddToCalendar';
-import { calendarEventFromSite, rsvpClosedMessage } from '../event/event-helpers';
+import { audienceNote, calendarEventsFromSite, eventTimes, rsvpClosedMessage } from '../event/event-helpers';
 import { ProgrammeTimeline } from '../programme/ProgrammeTimeline';
 import { ShaderBackdrop } from '../effects/ShaderBackdrop';
 import { TestimonialCarousel } from '../testimonials/TestimonialCarousel';
@@ -347,20 +347,86 @@ export function MomentsMarquee() {
 /* ---------------------------------------------------------------- Event */
 
 export function EventSection({ site }: { site: SiteOverview }) {
-  const { event } = site;
+  const { celebration } = site;
+  const [event] = site.events;
   return (
     <section aria-labelledby="event-heading" className="bg-cream py-20 sm:py-28">
       <div className="container-page grid gap-12 lg:grid-cols-[0.9fr_1.1fr] lg:gap-20">
         <Reveal x={-140} y={0} rotate={-3}>
-          <SectionHeading dramatic align="left" eyebrow="The celebration" id="event-heading" title={event.name} description={event.tagline ?? event.description ?? undefined} />
+          <SectionHeading
+            dramatic
+            align="left"
+            eyebrow="The celebration"
+            id="event-heading"
+            title={celebration.name}
+            description={celebration.tagline ?? celebration.description ?? undefined}
+          />
           <div className="mt-8 flex flex-col gap-5">
-            <AddToCalendar event={calendarEventFromSite(site)} className="text-navy" />
+            <AddToCalendar events={calendarEventsFromSite(site)} className="text-navy" />
             <MoreLink to="/event">All event details</MoreLink>
           </div>
         </Reveal>
-        <Reveal delay={0.15} x={140} y={0} rotate={3}>
-          <EventDetails event={event} compact />
+        {event && (
+          <Reveal delay={0.15} x={140} y={0} rotate={3}>
+            <EventDetails event={event} timezone={celebration.timezone} compact />
+          </Reveal>
+        )}
+      </div>
+    </section>
+  );
+}
+
+/* ---------------------------------------------------------------- Schedule (several events) */
+
+const dayLabel = (iso: string, timeZone: string) =>
+  new Intl.DateTimeFormat('en-GB', { weekday: 'short', day: 'numeric', month: 'short', timeZone }).format(new Date(iso));
+
+export function ScheduleSection({ site }: { site: SiteOverview }) {
+  const { celebration, events } = site;
+  return (
+    <section aria-labelledby="schedule-heading" className="bg-cream py-20 sm:py-28">
+      <div className="container-page grid gap-12 lg:grid-cols-[0.9fr_1.1fr] lg:gap-20">
+        <Reveal x={-140} y={0} rotate={-3}>
+          <SectionHeading
+            dramatic
+            align="left"
+            eyebrow="Schedule"
+            id="schedule-heading"
+            title={celebration.name}
+            description={celebration.tagline ?? celebration.description ?? undefined}
+          />
+          <div className="mt-8 flex flex-col gap-5">
+            <AddToCalendar events={calendarEventsFromSite(site)} filename={celebration.name} className="text-navy" />
+            <MoreLink to="/event">All event details</MoreLink>
+          </div>
         </Reveal>
+        <motion.ol variants={staggerParent} {...onView('hidden', 'show')} className="divide-y divide-gold/25 border-y border-gold/25">
+          {events.map((event) => {
+            const audience = audienceNote(event);
+            return (
+              <motion.li key={event.id} variants={popChild}>
+                <Link
+                  to={`/event#${event.slug}`}
+                  className="group grid grid-cols-[4.5rem_1fr_auto] items-start gap-x-4 py-5 transition-colors hover:bg-gold/5 sm:grid-cols-[6rem_1fr_auto] sm:gap-x-6"
+                >
+                  <time dateTime={event.startsAt} className="pt-1 font-display text-base leading-tight text-gold-rich sm:text-lg">
+                    {dayLabel(event.startsAt, celebration.timezone)}
+                  </time>
+                  <span className="min-w-0">
+                    <span className="block font-display text-xl leading-snug text-navy sm:text-2xl">{event.name}</span>
+                    <span className="mt-1 block text-sm text-charcoal/80">{eventTimes(event, celebration.timezone)}</span>
+                    <span className="block text-sm text-muted">
+                      {event.venueName}
+                      {event.city ? `, ${event.city}` : ''}
+                    </span>
+                    {audience && <span className="mt-1 block text-xs uppercase tracking-[0.18em] text-gold-rich">{audience}</span>}
+                  </span>
+                  <ArrowRight className="mt-2 size-4 text-gold-rich transition-transform duration-300 ease-luxe group-hover:translate-x-1" aria-hidden />
+                </Link>
+              </motion.li>
+            );
+          })}
+        </motion.ol>
       </div>
     </section>
   );
@@ -368,15 +434,19 @@ export function EventSection({ site }: { site: SiteOverview }) {
 
 /* ---------------------------------------------------------------- Programme */
 
-export function ProgrammeSection() {
+export function ProgrammeSection({ timezone }: { timezone?: string }) {
   const programme = useProgramme();
   if ((programme.isError && !programme.data) || programme.data?.length === 0) return null;
-  const total = programme.data?.length ?? 0;
+  const groups = programme.data ?? [];
+  const several = groups.length > 1;
+  const total = groups.reduce((sum, g) => sum + g.items.length, 0);
+  // One event shows its first six items; several show the first three of each.
+  const limit = several ? 3 : 6;
   return (
     <section aria-labelledby="programme-heading" className="bg-ivory py-20 sm:py-28">
       <div className="container-page">
         <Reveal>
-          <SectionHeading dramatic eyebrow="Order of the evening" id="programme-heading" title="The programme" />
+          <SectionHeading dramatic eyebrow={several ? 'Order of events' : 'Order of the evening'} id="programme-heading" title="The programme" />
         </Reveal>
         <div className="mx-auto mt-14 max-w-2xl">
           {programme.isPending ? (
@@ -386,10 +456,24 @@ export function ProgrammeSection() {
               ))}
             </div>
           ) : (
-            <ProgrammeTimeline items={programme.data} limit={6} />
+            <div className="space-y-14">
+              {groups.map((group) => (
+                <div key={group.event.id}>
+                  {several && (
+                    <h3 className="mb-8 text-center font-display text-2xl text-navy">
+                      {group.event.name}
+                      <span className="mt-1 block text-[11px] font-sans uppercase tracking-[0.3em] text-gold-rich">
+                        {formatEventDate(group.event.startsAt, timezone)}
+                      </span>
+                    </h3>
+                  )}
+                  <ProgrammeTimeline items={group.items} limit={limit} eventStart={group.event.startsAt} timezone={timezone} />
+                </div>
+              ))}
+            </div>
           )}
         </div>
-        {total > 6 && (
+        {(total > limit || several) && (
           <div className="mt-10 text-center">
             <MoreLink to="/programme">See the full programme</MoreLink>
           </div>
@@ -443,8 +527,8 @@ export function TestimonialsSection() {
 /* ---------------------------------------------------------------- RSVP */
 
 export function RsvpCta({ site }: { site: SiteOverview }) {
-  const { event } = site;
-  const { rsvp } = event;
+  const { celebration } = site;
+  const { rsvp } = celebration;
   return (
     <section aria-labelledby="rsvp-heading" className="relative isolate overflow-hidden bg-ivory py-20 sm:py-28">
       <div className="container-page">
@@ -469,7 +553,7 @@ export function RsvpCta({ site }: { site: SiteOverview }) {
                   : 'We would be honoured by your presence.'}
                 {rsvp.deadline && (
                   <>
-                    {' '}Kindly respond by <time dateTime={rsvp.deadline}>{formatEventDate(rsvp.deadline, event.timezone)}</time>.
+                    {' '}Kindly respond by <time dateTime={rsvp.deadline}>{formatEventDate(rsvp.deadline, celebration.timezone)}</time>.
                   </>
                 )}
               </p>
@@ -482,7 +566,7 @@ export function RsvpCta({ site }: { site: SiteOverview }) {
               </MagneticLink>
             </>
           ) : (
-            <p className="mx-auto mt-6 max-w-md text-[15px] leading-relaxed text-ivory/75">{rsvpClosedMessage(rsvp, event.timezone)}</p>
+            <p className="mx-auto mt-6 max-w-md text-[15px] leading-relaxed text-ivory/75">{rsvpClosedMessage(rsvp, celebration.timezone)}</p>
           )}
         </Reveal>
       </div>

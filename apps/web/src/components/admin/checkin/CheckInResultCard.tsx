@@ -2,6 +2,8 @@ import { useEffect, useRef, useState, type ReactNode, type Ref } from 'react';
 import {
   AlertTriangle,
   Ban,
+  CalendarDays,
+  CalendarX2,
   CheckCircle2,
   Clock,
   Loader2,
@@ -57,6 +59,12 @@ export const STATUS_COPY: Record<CheckInVerifyStatus, { title: string; tone: Ton
     tone: 'warning',
     icon: <UserX />,
     help: 'This guest declined the invitation. Refer them to the host desk if their plans changed.',
+  },
+  NOT_FOR_THIS_EVENT: {
+    title: 'Not For This Event',
+    tone: 'danger',
+    icon: <CalendarX2 />,
+    help: 'Do not admit to this event. Direct the guest to their own event, or to the host desk.',
   },
   INVALID: { title: 'Invalid Code', tone: 'danger', icon: <XCircle />, help: 'This code is not a recognised invitation. Try again or search by name.' },
 };
@@ -115,6 +123,19 @@ function Shell({ tone, icon, title, children, headingRef }: { tone: Tone; icon: 
   );
 }
 
+/** "For Birthday Dinner": which event a result belongs to, when there are several. */
+function EventLine({ name }: { name: string }) {
+  return (
+    <p className="mb-3 inline-flex items-center gap-1.5 rounded-full bg-white/80 px-2.5 py-1 text-xs font-medium text-navy ring-1 ring-navy/10">
+      <CalendarDays className="size-3.5" aria-hidden />
+      <span>
+        <span className="sr-only">Event: </span>
+        {name}
+      </span>
+    </p>
+  );
+}
+
 const bigButton = 'flex h-14 w-full items-center justify-center gap-2 rounded-xl text-base font-semibold transition-colors disabled:opacity-60 [&_svg]:size-5';
 
 /**
@@ -127,12 +148,15 @@ export function CheckInResultCard({
   checkingIn,
   onReset,
   onRetry,
+  showEvent = false,
 }: {
   view: CheckInView;
   onCheckIn: (partySize: number) => void;
   checkingIn?: boolean;
   onReset: () => void;
   onRetry?: () => void;
+  /** Name the event the result is for (when the celebration has several). */
+  showEvent?: boolean;
 }) {
   const headingRef = useRef<HTMLHeadingElement>(null);
   const partySize = view.kind === 'result' ? (view.result.guest?.partySize ?? 1) : 1;
@@ -178,6 +202,7 @@ export function CheckInResultCard({
     const r = view.record;
     return (
       <Shell tone="valid" icon={<CheckCircle2 />} title="Check-In Complete" headingRef={headingRef}>
+        {showEvent && <EventLine name={r.eventName} />}
         <p className="text-2xl font-semibold leading-tight text-navy">{r.guestName}</p>
         <p className="mt-1 text-sm text-charcoal">
           {guestsLabel(r.partySize)} admitted at {formatTimeOfDay(r.checkedInAt)}
@@ -194,6 +219,7 @@ export function CheckInResultCard({
 
   return (
     <Shell tone={copy.tone} icon={copy.icon} title={copy.title} headingRef={headingRef}>
+      {showEvent && result.status !== 'INVALID' && <EventLine name={result.event.name} />}
       {guest ? (
         <>
           <p className="text-2xl font-semibold leading-tight text-navy">{guest.guestName}</p>
@@ -244,6 +270,24 @@ export function CheckInResultCard({
         </p>
       )}
 
+      {result.status === 'NOT_FOR_THIS_EVENT' && (
+        <div className="mt-3 rounded-lg bg-white/80 p-2.5 text-sm text-charcoal">
+          <p className="font-semibold text-error">Not on the list for {result.event.name}.</p>
+          {guest && guest.events.length > 0 ? (
+            <>
+              <p className="mt-1.5 text-xs font-medium uppercase tracking-wide text-muted">Their {guest.events.length === 1 ? 'event' : 'events'}</p>
+              <ul className="mt-1 list-inside list-disc">
+                {guest.events.map((e) => (
+                  <li key={e.id}>{e.name}</li>
+                ))}
+              </ul>
+            </>
+          ) : (
+            <p className="mt-1">They are not on the list for any event.</p>
+          )}
+        </div>
+      )}
+
       <p className={cn('mt-3 text-sm', result.status === 'VALID' ? 'text-muted' : 'font-medium text-charcoal')}>{copy.help}</p>
 
       {result.status === 'VALID' && guest ? (
@@ -287,6 +331,7 @@ export function announcementFor(view: CheckInView | null): string {
     case 'result': {
       const copy = STATUS_COPY[view.result.status];
       const name = view.result.guest?.guestName;
+      if (view.result.status === 'NOT_FOR_THIS_EVENT') return `${copy.title}. ${name ?? 'This guest'} is not on the list for ${view.result.event.name}.`;
       return `${copy.title}.${name ? ` ${name}.` : ''}${view.result.guest ? ` ${guestsLabel(view.result.guest.partySize)}.` : ''}`;
     }
   }

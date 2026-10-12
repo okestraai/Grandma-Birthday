@@ -1,6 +1,5 @@
 import { SEO } from '@/components/seo/SEO';
 import { celebrantName, siteNameOf, useSite } from '@/lib/public-api';
-import { formatEventDate } from '@/lib/utils';
 import { Hero, HeroSkeleton, HeroUnavailable } from '@/components/public/home/Hero';
 import {
   EventSection,
@@ -10,11 +9,13 @@ import {
   MomentsMarquee,
   ProgrammeSection,
   RsvpCta,
+  ScheduleSection,
   StoryTeaser,
   TestimonialsSection,
 } from '@/components/public/home/sections';
 import { ScrollScene, VelocityBand } from '@/components/public/motion';
 import { eventJsonLd, personJsonLd, siteImagePath } from '@/components/public/jsonld';
+import { celebrationDates, celebrationPlace, hasSeveralEvents } from '@/components/public/event/event-helpers';
 
 export default function HomePage() {
   const { data: site, isError, isFetching, refetch } = useSite();
@@ -23,9 +24,13 @@ export default function HomePage() {
   if (!site) return isError ? <HeroUnavailable onRetry={() => void refetch()} retrying={isFetching} /> : <HeroSkeleton />;
 
   const name = celebrantName(site.celebrant);
+  const several = hasSeveralEvents(site);
+  const where = site.events.length ? (several ? `: ${celebrationPlace(site)}` : ` at ${site.events[0].venueName}`) : '';
   const description =
     site.branding.siteDescription ??
-    `Join us on ${formatEventDate(site.event.startsAt, site.event.timezone)} at ${site.event.venueName} to celebrate ${site.celebrant.age ?? 70} years of ${name}.`;
+    (several
+      ? `Join us on ${celebrationDates(site)} to celebrate ${site.celebrant.age ?? 70} years of ${name}${where}.`
+      : `Join us on ${celebrationDates(site)}${where} to celebrate ${site.celebrant.age ?? 70} years of ${name}.`);
 
   return (
     // No page-level fade: the hero's own entrance is the reveal, and a fade would hold back the LCP.
@@ -35,7 +40,7 @@ export default function HomePage() {
         description={description}
         image={siteImagePath(site)}
         path="/"
-        jsonLd={[eventJsonLd(site), personJsonLd(site.celebrant)]}
+        jsonLd={[...eventJsonLd(site), personJsonLd(site.celebrant)]}
         siteName={siteNameOf(site)}
       />
       <Hero site={site} />
@@ -52,10 +57,9 @@ export default function HomePage() {
       </ScrollScene>
       <GalleryTeaser />
       <MomentsMarquee />
-      <ScrollScene>
-        <EventSection site={site} />
-      </ScrollScene>
-      <ProgrammeSection />
+      {/* One event: its details, as before. Several: a short schedule. */}
+      <ScrollScene>{several ? <ScheduleSection site={site} /> : <EventSection site={site} />}</ScrollScene>
+      <ProgrammeSection timezone={site.celebration.timezone} />
       <ScrollScene>
         <TestimonialsSection />
       </ScrollScene>

@@ -9,9 +9,11 @@ import { AdminDialog } from '../overlays';
 import { AButton, AField, AInput, ATextarea, describedBy } from '../ui';
 
 const TIME = /^([01]\d|2[0-3]):[0-5]\d$/;
+const DATE = /^\d{4}-\d{2}-\d{2}$/;
 
 const schema = z
   .object({
+    date: z.string().refine((v) => v === '' || DATE.test(v), 'Enter a date or leave it empty.'),
     startTime: z.string().regex(TIME, 'Enter a start time.'),
     endTime: z.string().refine((v) => v === '' || TIME.test(v), 'Enter a valid time or leave it empty.'),
     title: z.string().trim().min(1, 'Give the item a title.').min(2, 'Use at least 2 characters.').max(150, 'Keep the title to 150 characters or fewer.'),
@@ -26,14 +28,39 @@ const schema = z
 
 type FormValues = z.infer<typeof schema>;
 
-/** "5:00 PM — Guest Arrival", or "5:00 PM – 6:00 PM — Guest Arrival" when there is an end time. */
-export function programmeLine(item: Pick<ProgrammeItem, 'startTime' | 'endTime' | 'title'>): string {
-  const time = item.endTime ? `${formatClock(item.startTime)} – ${formatClock(item.endTime)}` : formatClock(item.startTime);
-  return `${time} — ${item.title}`;
+const dayFormat = new Intl.DateTimeFormat('en-GB', { weekday: 'short', day: 'numeric', month: 'short', timeZone: 'UTC' });
+
+/** "2026-11-22" → "Sun 22 Nov". */
+export function formatProgrammeDate(date: string): string {
+  return dayFormat.format(new Date(`${date}T00:00:00Z`));
 }
 
-/** Create (item null) or edit a programme item. Mount only while open. */
-export function ProgrammeItemDialog({ item, onClose }: { item: ProgrammeItem | null; onClose: () => void }) {
+/**
+ * "5:00 PM — Guest Arrival", or "5:00 PM – 6:00 PM — Guest Arrival" when there is an end time.
+ * Items on another day than the event starts lead with the day: "Sun 22 Nov, 12:30 AM — Last dance".
+ */
+export function programmeLine(item: Pick<ProgrammeItem, 'startTime' | 'endTime' | 'title'> & { date?: string | null }): string {
+  const time = item.endTime ? `${formatClock(item.startTime)} – ${formatClock(item.endTime)}` : formatClock(item.startTime);
+  return `${item.date ? `${formatProgrammeDate(item.date)}, ` : ''}${time} — ${item.title}`;
+}
+
+/**
+ * Create (item null) or edit a programme item of one event. `eventDay` is the event's start
+ * date (YYYY-MM-DD in the celebration's time zone), for the date field's hint. Mount only while open.
+ */
+export function ProgrammeItemDialog({
+  item,
+  eventId,
+  eventName,
+  eventDay,
+  onClose,
+}: {
+  item: ProgrammeItem | null;
+  eventId: string;
+  eventName?: string;
+  eventDay?: string;
+  onClose: () => void;
+}) {
   const {
     register,
     handleSubmit,
@@ -42,6 +69,7 @@ export function ProgrammeItemDialog({ item, onClose }: { item: ProgrammeItem | n
   } = useForm<FormValues>({
     resolver: zodResolver(schema),
     defaultValues: {
+      date: item?.date ?? '',
       startTime: item?.startTime.slice(0, 5) ?? '',
       endTime: item?.endTime?.slice(0, 5) ?? '',
       title: item?.title ?? '',
@@ -52,8 +80,12 @@ export function ProgrammeItemDialog({ item, onClose }: { item: ProgrammeItem | n
   });
 
   const save = useAdminMutation<ProgrammeItem, UpsertProgrammeItemRequest>({
-    mutationFn: (body) => (item ? api.put<ProgrammeItem>(`/admin/programme/${item.id}`, body) : api.post<ProgrammeItem>('/admin/programme', body)),
-    invalidate: [adminKeys.programme],
+    mutationFn: (body) =>
+      item
+        ? api.put<ProgrammeItem>(`/admin/events/${eventId}/programme/${item.id}`, body)
+        : api.post<ProgrammeItem>(`/admin/events/${eventId}/programme`, body),
+    // The events list shows each event's item count.
+    invalidate: [adminKeys.programme, adminKeys.events],
     success: item ? 'Programme item updated.' : 'Programme item added.',
     toastError: false,
     onSuccess: onClose,
@@ -62,6 +94,8 @@ export function ProgrammeItemDialog({ item, onClose }: { item: ProgrammeItem | n
 
   const submit = handleSubmit((v) =>
     save.mutate({
+      // Blank, or the event's own day: the item is on the day the event starts.
+      date: v.date && v.date !== eventDay ? v.date : null,
       startTime: v.startTime,
       endTime: v.endTime || null,
       title: v.title.trim(),
@@ -76,6 +110,7 @@ export function ProgrammeItemDialog({ item, onClose }: { item: ProgrammeItem | n
       open
       onOpenChange={(open) => !open && onClose()}
       title={item ? 'Edit programme item' : 'Add programme item'}
+      description={eventName}
       footer={
         <>
           <AButton variant="ghost" onClick={onClose}>
@@ -88,6 +123,14 @@ export function ProgrammeItemDialog({ item, onClose }: { item: ProgrammeItem | n
       }
     >
       <form id="programme-form" noValidate onSubmit={submit} className="space-y-3">
+        <AField
+          label="Date"
+          htmlFor="pg-date"
+          error={errors.date?.message}
+          hint={`Leave blank for the event’s day${eventDay ? ` (${formatProgrammeDate(eventDay)})` : ''}. Set a date only for items after midnight.`}
+        >
+          <AInput id="pg-date" type="date" className="sm:max-w-[calc(50%-0.375rem)]" min={eventDay} aria-invalid={!!errors.date} aria-describedby="pg-date-msg" {...register('date')} />
+        </AField>
         <div className="grid gap-3 sm:grid-cols-2">
           <AField label="Starts at" htmlFor="pg-start" required error={errors.startTime?.message}>
             <AInput

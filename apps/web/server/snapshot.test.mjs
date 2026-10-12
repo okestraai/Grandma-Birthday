@@ -27,7 +27,7 @@ afterEach(async () => {
 
 describe('snapshotScript', () => {
   it('escapes "<" so the data cannot close the script tag', () => {
-    const tag = snapshotScript({ v: 1, entries: [{ key: ['public', 'site'], data: { name: '</script><script>alert(1)</script><!--' }, updatedAt: 1 }] });
+    const tag = snapshotScript({ v: 2, entries: [{ key: ['public', 'site'], data: { name: '</script><script>alert(1)</script><!--' }, updatedAt: 1 }] });
     const body = tag.slice(tag.indexOf('>') + 1, tag.lastIndexOf('</script>'));
     expect(body).not.toContain('<');
     expect(JSON.parse(body).entries[0].data.name).toBe('</script><script>alert(1)</script><!--');
@@ -35,12 +35,12 @@ describe('snapshotScript', () => {
   });
 
   it('is empty without entries', () => {
-    expect(snapshotScript({ v: 1, entries: [] })).toBe('');
-    expect(injectSnapshot('<div id="root"></div>', { v: 1, entries: [] })).toBe('<div id="root"></div>');
+    expect(snapshotScript({ v: 2, entries: [] })).toBe('');
+    expect(injectSnapshot('<div id="root"></div>', { v: 2, entries: [] })).toBe('<div id="root"></div>');
   });
 
   it('goes just before the root element', () => {
-    const html = injectSnapshot('<body><div id="root"></div></body>', { v: 1, entries: [{ key: ['public', 'site'], data: 1, updatedAt: 1 }] });
+    const html = injectSnapshot('<body><div id="root"></div></body>', { v: 2, entries: [{ key: ['public', 'site'], data: 1, updatedAt: 1 }] });
     expect(html).toMatch(/<script type="application\/json" id="bp-snapshot">.*<\/script>\s*<div id="root">/);
   });
 });
@@ -102,7 +102,7 @@ describe('createSnapshotStore', () => {
     const store = createSnapshotStore({ apiOrigin: API, dir, fetchImpl: fakeApi() });
     await writeFile(
       store.file,
-      JSON.stringify({ v: 1, entries: [{ key: ['public', 'site'], data: 1, updatedAt: 1 }, { key: ['admin', 'guests'], data: [], updatedAt: 1 }] }),
+      JSON.stringify({ v: 2, entries: [{ key: ['public', 'site'], data: 1, updatedAt: 1 }, { key: ['admin', 'guests'], data: [], updatedAt: 1 }] }),
     );
     await store.load();
     expect(store.snapshot().entries.map((e) => e.key)).toEqual([['public', 'site']]);

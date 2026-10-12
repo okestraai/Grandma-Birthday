@@ -11,7 +11,8 @@ import { SettingsModule } from './settings/settings.module';
 import { QrModule } from './qr/qr.module';
 import { AuthModule } from './auth/auth.module';
 import { UsersModule } from './users/users.module';
-import { EventModule } from './event/event.module';
+import { CelebrationModule } from './celebration/celebration.module';
+import { EventsModule } from './events/events.module';
 import { CelebrantModule } from './celebrant/celebrant.module';
 import { TimelineModule } from './timeline/timeline.module';
 import { FamilyModule } from './family/family.module';
@@ -48,7 +49,8 @@ import { RequestIdMiddleware } from './common/request-id.middleware';
     QrModule,
     AuthModule,
     UsersModule,
-    EventModule,
+    CelebrationModule,
+    EventsModule,
     CelebrantModule,
     TimelineModule,
     FamilyModule,

@@ -5,11 +5,36 @@ import { cn, formatClock } from '@/lib/utils';
 import { Reveal } from '../reveal';
 import { ScrollLine, onView } from '../motion';
 
+/** YYYY-MM-DD of an instant in a time zone. */
+export function localDate(iso: string, timeZone?: string): string {
+  return new Intl.DateTimeFormat('en-CA', { year: 'numeric', month: '2-digit', day: '2-digit', timeZone }).format(new Date(iso));
+}
+
+/** "Sun 22 Nov" for an item's own date. */
+function shortDate(date: string): string {
+  return new Intl.DateTimeFormat('en-GB', { weekday: 'short', day: 'numeric', month: 'short', timeZone: 'UTC' }).format(new Date(`${date}T12:00:00Z`));
+}
+
 /**
  * Vertical programme: time on the left, a gold spine with dots, and the item on the right.
  * The spine draws itself down as the list scrolls past; items slide in one after another.
+ * An item dated on another day than the event starts (after midnight, say) shows that date.
  */
-export function ProgrammeTimeline({ items, tone = 'light', limit }: { items: ProgrammeItem[]; tone?: 'light' | 'dark'; limit?: number }) {
+export function ProgrammeTimeline({
+  items,
+  tone = 'light',
+  limit,
+  eventStart,
+  timezone,
+}: {
+  items: ProgrammeItem[];
+  tone?: 'light' | 'dark';
+  limit?: number;
+  /** The event's start, to tell which items fall on another day. */
+  eventStart?: string;
+  timezone?: string;
+}) {
+  const startDay = eventStart ? localDate(eventStart, timezone) : null;
   const sorted = [...items].sort((a, b) => a.sortOrder - b.sortOrder || a.startTime.localeCompare(b.startTime));
   const shown = limit ? sorted.slice(0, limit) : sorted;
   const dark = tone === 'dark';
@@ -28,6 +53,9 @@ export function ProgrammeTimeline({ items, tone = 'light', limit }: { items: Pro
                 <span className="sr-only">until </span>
                 {formatClock(item.endTime)}
               </p>
+            )}
+            {item.date && item.date !== startDay && (
+              <p className={cn('mt-1 text-[11px] uppercase tracking-[0.15em]', dark ? 'text-gold/80' : 'text-gold-rich')}>{shortDate(item.date)}</p>
             )}
           </div>
           <div className="relative pb-1 pl-6 sm:pl-8">

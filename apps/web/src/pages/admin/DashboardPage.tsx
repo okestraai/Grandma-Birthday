@@ -15,7 +15,7 @@ import {
   UserCheck,
   Users,
 } from 'lucide-react';
-import type { StorageSummary } from '@birthday/types';
+import type { DashboardEventStats, StorageSummary } from '@birthday/types';
 import { dashboardQuery } from '@/lib/admin-queries';
 import { useAuth } from '@/lib/auth';
 import { cn, formatBytes, formatDateTime, formatRelative } from '@/lib/utils';
@@ -46,6 +46,58 @@ function LinkedCard({ to, label, children }: { to: string; label: string; childr
     >
       {children}
     </Link>
+  );
+}
+
+/** Replies and check-ins per event, shown when the celebration has more than one. */
+function EventsTable({ events }: { events: DashboardEventStats[] }) {
+  return (
+    <div className="overflow-x-auto">
+      <table className="w-full min-w-[480px] text-left text-[13px]">
+        <caption className="sr-only">Attending and checked-in people per event</caption>
+        <thead>
+          <tr className="border-b border-navy/10 text-xs text-muted">
+            <th scope="col" className="py-2 pr-3 font-medium">
+              Event
+            </th>
+            <th scope="col" className="py-2 pr-3 text-right font-medium">
+              Attending
+            </th>
+            <th scope="col" className="py-2 pr-3 text-right font-medium">
+              Capacity
+            </th>
+            <th scope="col" className="py-2 text-right font-medium">
+              Checked in
+            </th>
+          </tr>
+        </thead>
+        <tbody className="tabular-nums">
+          {events.map((e) => {
+            const full = e.capacity !== null && e.attendingPeople >= e.capacity;
+            return (
+              <tr key={e.eventId} className="border-b border-navy/[0.06] last:border-0">
+                <th scope="row" className="py-2 pr-3 font-medium text-navy">
+                  {e.name}
+                </th>
+                <td className="py-2 pr-3 text-right">
+                  {n(e.attendingPeople)} <span className="text-xs text-muted">people</span>
+                  <span className="block text-xs text-muted">
+                    {n(e.attendingGuests)} {e.attendingGuests === 1 ? 'guest' : 'guests'}
+                  </span>
+                </td>
+                <td className={cn('py-2 pr-3 text-right', full ? 'font-medium text-error' : 'text-muted')}>
+                  {e.capacity === null ? 'No limit' : n(e.capacity)}
+                  {full && <span className="block text-xs">Full</span>}
+                </td>
+                <td className="py-2 text-right">
+                  {n(e.checkedInPeople)} <span className="text-xs text-muted">of {n(e.attendingPeople)}</span>
+                </td>
+              </tr>
+            );
+          })}
+        </tbody>
+      </table>
+    </div>
   );
 }
 
@@ -159,7 +211,7 @@ export default function DashboardPage() {
       </div>
 
       <div className="mt-4 grid gap-4 lg:grid-cols-2">
-        <Panel id="capacity" title="Event capacity" description="Confirmed people (guests plus companions) against the venue capacity">
+        <Panel id="capacity" title="Capacity" description="Confirmed people (guests plus companions) against the celebration capacity">
           {!stats ? (
             <div aria-hidden>
               <Skeleton className="h-6 w-40" />
@@ -173,7 +225,7 @@ export default function DashboardPage() {
                 <span className="text-muted"> of {n(stats.capacity)} places</span>
                 <span className="ml-2 text-xs text-muted">({capacityPct}%)</span>
               </p>
-              <Meter className="mt-3" value={stats.confirmedPeople} max={stats.capacity} label="Event capacity used" />
+              <Meter className="mt-3" value={stats.confirmedPeople} max={stats.capacity} label="Celebration capacity used" />
               {stats.capacityRemaining > 0 ? (
                 <p className="mt-2 text-xs text-muted">
                   {n(stats.capacityRemaining)} {stats.capacityRemaining === 1 ? 'place' : 'places'} remaining
@@ -184,8 +236,8 @@ export default function DashboardPage() {
                   <span>
                     {stats.capacityRemaining < 0
                       ? `Capacity exceeded by ${n(Math.abs(stats.capacityRemaining))} ${Math.abs(stats.capacityRemaining) === 1 ? 'person' : 'people'}.`
-                      : 'The event is at full capacity.'}{' '}
-                    New RSVPs may be refused. {can('event:manage') && <Link to="/admin/event" className="font-medium underline">Review event settings</Link>}
+                      : 'The celebration is at full capacity.'}{' '}
+                    New RSVPs may be refused. {can('event:manage') && <Link to="/admin/event#celebration-rsvp" className="font-medium underline">Review RSVP rules</Link>}
                   </span>
                 </p>
               )}
@@ -227,6 +279,24 @@ export default function DashboardPage() {
           )}
         </Panel>
       </div>
+
+      {stats && (stats.events?.length ?? 0) > 1 && (
+        <Panel
+          id="events"
+          className="mt-4"
+          title="Events"
+          description="People attending each event, and how many have arrived"
+          actions={
+            can('event:manage') ? (
+              <Link to="/admin/event" className="inline-flex items-center gap-1 text-[13px] font-medium text-emerald hover:underline">
+                Manage events <ArrowRight className="size-3.5" aria-hidden />
+              </Link>
+            ) : undefined
+          }
+        >
+          <EventsTable events={stats.events} />
+        </Panel>
+      )}
 
       <div className="mt-4">
         {stats ? (

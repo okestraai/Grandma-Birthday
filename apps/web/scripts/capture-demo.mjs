@@ -111,7 +111,7 @@ import type {
   AlbumSummary,
   FamilyTree,
   Paginated,
-  ProgrammeItem,
+  ProgrammeGroup,
   PublicMedia,
   PublicTestimonial,
   RsvpFormConfig,
@@ -132,7 +132,8 @@ export const albumDetails: Record<string, AlbumDetail> = ${json(data.albumDetail
 /** First page of each album's photos, by slug. */
 export const albumMedia: Record<string, Paginated<PublicMedia>> = ${json(data.albumMedia)};
 
-export const programme: ProgrammeItem[] = ${json(data.programme)};
+/** Programme items grouped by public event. */
+export const programme: ProgrammeGroup[] = ${json(data.programme)};
 
 /** First page of the public tributes, by page size. */
 export const testimonials: Record<number, Paginated<PublicTestimonial>> = ${json(data.testimonials)};

@@ -1,5 +1,5 @@
 import { Inject, Injectable } from '@nestjs/common';
-import type { DigitalInvitation } from '@birthday/types';
+import type { DigitalInvitation, InvitationEvent } from '@birthday/types';
 import { APP_CONFIG, type AppConfig } from '../config/app-config';
 import { Errors, AppException } from '../common/errors';
 import { invitationCode, randomToken } from '../common/utils/crypto';
@@ -8,7 +8,9 @@ import { Prisma } from '../generated/prisma/client';
 import { PrismaService, type Tx } from '../prisma/prisma.service';
 import { MailService } from '../notifications/mail.service';
 import { invitationEmail, rsvpDeclinedEmail } from '../notifications/templates';
+import type { EventLines } from '../qr/qr.service';
 import { SettingsService } from '../settings/settings.service';
+import { EventsService, eventsForGuest, toInvitationEvent, type EventRow } from '../events/events.service';
 
 /** How long after the event ends an invitation still counts as valid (late check-ins). */
 export const INVITATION_GRACE_MS = 12 * 3600 * 1000;
@@ -23,17 +25,61 @@ export function formatEventTime(start: Date, end: Date, timeZone: string): strin
 }
 
 export const INVITATION_INCLUDE = {
-  guest: { include: { category: true, rsvp: { include: { companions: { orderBy: { createdAt: 'asc' as const } } } } } },
-  checkIns: { where: { reversedAt: null }, take: 1 },
+  guest: {
+    include: {
+      category: true,
+      extraEvents: { select: { eventId: true } },
+      rsvp: { include: { companions: { orderBy: { createdAt: 'asc' as const } }, events: true } },
+    },
+  },
+  checkIns: { where: { reversedAt: null } },
 } satisfies Prisma.InvitationInclude;
 
 export type InvitationWithGuest = Prisma.InvitationGetPayload<{ include: typeof INVITATION_INCLUDE }>;
+
+/** One of a guest's events, with the people they bring to it. */
+export interface GuestEvent {
+  event: Event;
+  partySize: number;
+}
+
+/**
+ * The events on a guest's invitation. Attending: the events they chose, plus information-only
+ * events they are invited to. Not replied yet: every event they are invited to, with their full
+ * allowance. Declined: none.
+ */
+export function guestEventsOf(invitation: InvitationWithGuest, events: EventRow[]): GuestEvent[] {
+  const { guest } = invitation;
+  const rsvp = guest.rsvp;
+  if (rsvp?.response === 'DECLINED') return [];
+  const invited = eventsForGuest(
+    { categoryId: guest.categoryId, extraEventIds: guest.extraEvents.map((e) => e.eventId), chosenEventIds: rsvp?.events.map((e) => e.eventId) ?? [] },
+    events,
+  );
+  if (!rsvp) return invited.map((event) => ({ event, partySize: 1 + guest.allowedCompanions }));
+  const chosen = new Map(rsvp.events.map((e) => [e.eventId, e.companionCount]));
+  return invited
+    .filter((e) => chosen.has(e.id) || !e.rsvpEnabled)
+    .map((event) => ({ event, partySize: 1 + (chosen.get(event.id) ?? rsvp.companionCount) }));
+}
+
+export function eventLines(event: Event, timeZone: string): EventLines {
+  return {
+    name: event.name,
+    dateText: formatEventDate(event.startsAt, timeZone),
+    timeText: formatEventTime(event.startsAt, event.endsAt, timeZone),
+    venue: event.venueName,
+    address: event.address,
+    dressCode: event.dressCode,
+  };
+}
 
 @Injectable()
 export class InvitationsService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly settings: SettingsService,
+    private readonly events: EventsService,
     private readonly mail: MailService,
     @Inject(APP_CONFIG) private readonly config: AppConfig,
   ) {}
@@ -42,8 +88,14 @@ export class InvitationsService {
     return `${this.config.publicWebUrl}/invitation/${token}`;
   }
 
-  isExpired(event: Event, now = new Date()): boolean {
-    return now.getTime() > event.endsAt.getTime() + INVITATION_GRACE_MS;
+  /** Expired some hours after the event (or the last of the events) ends. */
+  isExpired(endsAt: Date, now = new Date()): boolean {
+    return now.getTime() > endsAt.getTime() + INVITATION_GRACE_MS;
+  }
+
+  /** The events on a guest's invitation (see guestEventsOf). */
+  async guestEvents(invitation: InvitationWithGuest): Promise<GuestEvent[]> {
+    return guestEventsOf(invitation, await this.events.list());
   }
 
   /** Creates the guest's invitation if missing. Retries on the (very unlikely) code collision. */
@@ -66,7 +118,13 @@ export class InvitationsService {
 
   async digital(token: string): Promise<DigitalInvitation> {
     const invitation = await this.findByToken(token);
-    const [event, celebrant] = await Promise.all([this.settings.getEvent(), this.prisma.celebrant.findUniqueOrThrow({ where: { id: 1 } })]);
+    const [celebration, celebrant, guestEvents] = await Promise.all([
+      this.settings.getCelebration(),
+      this.prisma.celebrant.findUniqueOrThrow({ where: { id: 1 } }),
+      this.guestEvents(invitation),
+    ]);
+    const checkedIn = new Set(invitation.checkIns.map((c) => c.eventId));
+    const events: InvitationEvent[] = guestEvents.map((g) => toInvitationEvent(g.event, g.partySize, checkedIn.has(g.event.id)));
     const rsvp = invitation.guest.rsvp;
     const companions = rsvp?.companions.map((c) => c.fullName) ?? [];
     const partySize = rsvp ? (rsvp.response === 'ATTENDING' ? 1 + rsvp.companionCount : 0) : 1 + invitation.guest.allowedCompanions;
@@ -81,17 +139,8 @@ export class InvitationsService {
       partySize,
       response: rsvp?.response ?? null,
       checkedIn: invitation.checkIns.length > 0,
-      event: {
-        name: event.name,
-        celebrantName: celebrant.fullName,
-        startsAt: event.startsAt.toISOString(),
-        endsAt: event.endsAt.toISOString(),
-        timezone: event.timezone,
-        venueName: event.venueName,
-        address: event.address,
-        dressCode: event.dressCode,
-        mapUrl: event.mapUrl,
-      },
+      celebration: { name: celebration.name, celebrantName: celebrant.fullName, timezone: celebration.timezone },
+      events,
       qrSvgUrl: `${base}/qr.svg`,
       qrPngUrl: `${base}/qr.png`,
       pdfUrl: `${base}/pass.pdf`,
@@ -103,21 +152,21 @@ export class InvitationsService {
   async sendInvitationEmail(invitationId: string, kind: 'invitation' | 'confirmation'): Promise<boolean> {
     const invitation = await this.prisma.invitation.findUnique({ where: { id: invitationId }, include: INVITATION_INCLUDE });
     if (!invitation) throw Errors.notFound('Invitation');
-    const [event, celebrant] = await Promise.all([this.settings.getEvent(), this.prisma.celebrant.findUniqueOrThrow({ where: { id: 1 } })]);
+    const [celebration, celebrant, guestEvents] = await Promise.all([
+      this.settings.getCelebration(),
+      this.prisma.celebrant.findUniqueOrThrow({ where: { id: 1 } }),
+      this.guestEvents(invitation),
+    ]);
     const guest = invitation.guest;
 
     const email =
       guest.rsvp?.response === 'DECLINED' && kind === 'confirmation'
-        ? rsvpDeclinedEmail({ guestName: guest.fullName, celebrantName: celebrant.fullName, eventName: event.name })
+        ? rsvpDeclinedEmail({ guestName: guest.fullName, celebrantName: celebrant.fullName, eventName: celebration.name })
         : invitationEmail({
             guestName: guest.fullName,
             celebrantName: celebrant.fullName,
-            eventName: event.name,
-            dateText: formatEventDate(event.startsAt, event.timezone),
-            timeText: formatEventTime(event.startsAt, event.endsAt, event.timezone),
-            venue: event.venueName,
-            address: event.address,
-            dressCode: event.dressCode,
+            eventName: celebration.name,
+            events: guestEvents.map((g) => ({ ...eventLines(g.event, celebration.timezone), partySize: g.partySize })),
             partySize: guest.rsvp?.response === 'ATTENDING' ? 1 + guest.rsvp.companionCount : 1 + guest.allowedCompanions,
             code: invitation.code,
             invitationUrl: kind === 'invitation' && !guest.rsvp ? `${this.config.publicWebUrl}/rsvp?invite=${invitation.token}` : this.url(invitation.token),

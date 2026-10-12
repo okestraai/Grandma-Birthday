@@ -71,7 +71,7 @@ describe('CategoryAllocations', () => {
     fireEvent.change(family, { target: { value: '70' } });
     fireEvent.change(screen.getByRole('spinbutton', { name: 'Places set aside for Church' }), { target: { value: '40' } });
 
-    expect(screen.getByRole('alert')).toHaveTextContent('The categories add up to 110 seats, 10 more than the event capacity of 100.');
+    expect(screen.getByRole('alert')).toHaveTextContent('The categories add up to 110 seats, 10 more than the celebration capacity of 100.');
     const save = screen.getByRole('button', { name: 'Save places' });
     expect(save).toBeDisabled();
     fireEvent.click(save);
@@ -91,7 +91,7 @@ describe('CategoryAllocations', () => {
     fireEvent.change(await screen.findByRole('spinbutton', { name: 'Places set aside for Family' }, LOAD), { target: { value: '50' } });
     fireEvent.click(screen.getByRole('button', { name: 'Save places' }));
     await waitFor(() =>
-      expect(api.put).toHaveBeenCalledWith('/admin/event/allocations', {
+      expect(api.put).toHaveBeenCalledWith('/admin/celebration/allocations', {
         allocations: [
           { categoryId: 'c1', capacity: 50 },
           { categoryId: 'c2', capacity: null },

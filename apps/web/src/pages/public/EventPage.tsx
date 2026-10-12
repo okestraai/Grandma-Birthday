@@ -1,5 +1,6 @@
 import { Link } from 'react-router';
 import { ArrowRight } from 'lucide-react';
+import type { PublicEvent, SiteOverview } from '@birthday/types';
 import { SEO } from '@/components/seo/SEO';
 import { Skeleton } from '@/components/ui/skeleton';
 import { ErrorState } from '@/components/ui/states';
@@ -9,12 +10,66 @@ import { PageHero } from '@/components/public/section';
 import { Reveal } from '@/components/public/reveal';
 import { EventDetails } from '@/components/public/event/EventDetails';
 import { AddToCalendar } from '@/components/public/event/AddToCalendar';
-import { calendarEventFromSite, directionsHref, rsvpClosedMessage } from '@/components/public/event/event-helpers';
+import {
+  calendarEvents,
+  calendarEventsFromSite,
+  celebrationDates,
+  celebrationPlace,
+  directionsHref,
+  hasSeveralEvents,
+  rsvpClosedMessage,
+} from '@/components/public/event/event-helpers';
 import { eventJsonLd, siteImagePath } from '@/components/public/jsonld';
 import { SeventyWatermark } from '@/components/public/seventy';
 import { Medallion } from '@/components/public/effects/Medallion';
 import { VenueMap } from '@/components/public/event/VenueMap';
 import { MagneticLink, SplitText, TiltCard } from '@/components/public/motion';
+
+function DirectionsLink({ event, className }: { event: PublicEvent; className?: string }) {
+  const directions = directionsHref(event);
+  return (
+    <a
+      href={directions.href}
+      {...(directions.newTab ? { target: '_blank', rel: 'noopener noreferrer' } : {})}
+      className={className}
+    >
+      Get directions <ArrowRight className="size-4" aria-hidden />
+      {directions.newTab && <span className="sr-only">(opens in a new tab)</span>}
+    </a>
+  );
+}
+
+/** One event on a site with several: its details, directions and its own calendar entry. */
+function EventCard({ site, event, index }: { site: SiteOverview; event: PublicEvent; index: number }) {
+  const headingId = `event-${event.slug}-heading`;
+  return (
+    <Reveal delay={Math.min(index, 3) * 0.08}>
+      <article id={event.slug} aria-labelledby={headingId} className="scroll-mt-28 rounded-[1.75rem] border border-gold/30 bg-white p-6 shadow-soft sm:p-8">
+        <p className="text-[11px] font-medium uppercase tracking-[0.3em] text-gold-rich">
+          <time dateTime={event.startsAt}>{formatEventDate(event.startsAt, site.celebration.timezone)}</time>
+        </p>
+        <h3 id={headingId} className="mt-2 font-display text-2xl text-navy sm:text-3xl">
+          {event.name}
+        </h3>
+        {event.description && (
+          <div className="mt-3 max-w-2xl space-y-3 text-[15px] leading-relaxed text-charcoal/85">
+            {paragraphs(event.description).map((p, i) => (
+              <p key={i}>{p}</p>
+            ))}
+          </div>
+        )}
+        <EventDetails event={event} timezone={site.celebration.timezone} compact />
+        <div className="mt-4 flex flex-col gap-4 border-t border-gold/25 pt-5 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
+          <DirectionsLink
+            event={event}
+            className="inline-flex h-11 items-center justify-center gap-2 rounded-full border border-gold/60 px-6 text-sm font-medium text-navy transition-colors hover:border-gold hover:bg-gold/10"
+          />
+          <AddToCalendar events={calendarEvents(site, [event])} size="sm" className="text-navy" />
+        </div>
+      </article>
+    </Reveal>
+  );
+}
 
 export default function EventPage() {
   const { data: site, isError, error, refetch } = useSite();
@@ -43,45 +98,64 @@ export default function EventPage() {
     );
   }
 
-  const { event } = site;
-  const directions = directionsHref(event);
-  const when = `${formatEventDate(event.startsAt, event.timezone)} at ${formatEventTime(event.startsAt, event.timezone)}`;
-  const { rsvp } = event;
+  const { celebration, events } = site;
+  const several = hasSeveralEvents(site);
+  // With one event the page reads as it always did: the event's details under the celebration's name.
+  const [main] = events;
+  const { rsvp } = celebration;
+  const when = several || !main
+    ? celebrationDates(site)
+    : `${formatEventDate(main.startsAt, celebration.timezone)} at ${formatEventTime(main.startsAt, celebration.timezone)}`;
+  const place = main ? (several ? celebrationPlace(site) : main.venueName) : null;
 
   return (
     <>
       <SEO
-        title={event.name}
-        description={`${when} · ${event.venueName}${event.city ? `, ${event.city}` : ''}. ${event.tagline ?? ''}`.trim()}
+        title={celebration.name}
+        description={`${when}${place ? ` · ${place}` : ''}${!several && main?.city ? `, ${main.city}` : ''}. ${celebration.tagline ?? ''}`.trim()}
         image={siteImagePath(site)}
         jsonLd={eventJsonLd(site)}
         siteName={siteNameOf(site)}
       />
-      <PageHero eyebrow="The celebration" title={event.name} description={event.tagline ?? undefined}>
+      <PageHero eyebrow="The celebration" title={celebration.name} description={celebration.tagline ?? undefined}>
         <p className="mt-6 text-sm text-ivory/80">
-          <time dateTime={event.startsAt}>{when}</time>
-          <span aria-hidden className="mx-2 text-gold">·</span>
-          {event.venueName}
+          <time dateTime={celebration.startsAt}>{when}</time>
+          {place && (
+            <>
+              <span aria-hidden className="mx-2 text-gold">·</span>
+              {place}
+            </>
+          )}
         </p>
-        <AddToCalendar event={calendarEventFromSite(site)} tone="dark" className="mt-8 text-ivory" />
+        <AddToCalendar events={calendarEventsFromSite(site)} filename={celebration.name} tone="dark" className="mt-8 text-ivory" />
       </PageHero>
 
       <section className="bg-ivory py-16 sm:py-24" aria-labelledby="details-heading">
         <div className="container-page grid gap-14 lg:grid-cols-[1.25fr_0.75fr] lg:gap-20">
           <div>
             <h2 id="details-heading" className="font-display text-3xl text-navy">
-              <SplitText text="Details for our guests" trigger="view" />
+              <SplitText text={several ? 'The events' : 'Details for our guests'} trigger="view" />
             </h2>
-            {event.description && (
+            {celebration.description && (
               <div className="mt-5 max-w-2xl space-y-4 text-[15px] leading-relaxed text-charcoal/85 sm:text-base">
-                {paragraphs(event.description).map((p, i) => (
+                {paragraphs(celebration.description).map((p, i) => (
                   <p key={i}>{p}</p>
                 ))}
               </div>
             )}
-            <Reveal className="mt-8">
-              <EventDetails event={event} />
-            </Reveal>
+            {several ? (
+              <div className="mt-8 space-y-6">
+                {events.map((event, i) => (
+                  <EventCard key={event.id} site={site} event={event} index={i} />
+                ))}
+              </div>
+            ) : (
+              main && (
+                <Reveal className="mt-8">
+                  <EventDetails event={main} timezone={celebration.timezone} contact={celebration} />
+                </Reveal>
+              )
+            )}
           </div>
 
           <aside className="space-y-6 lg:sticky lg:top-28 lg:self-start">
@@ -101,7 +175,7 @@ export default function EventPage() {
                       {rsvp.mode === 'INVITE_ONLY' ? 'Please reply with the personal link in your invitation.' : 'Let the family know you are coming.'}
                       {rsvp.deadline && (
                         <>
-                          {' '}Replies by <time dateTime={rsvp.deadline}>{formatEventDate(rsvp.deadline, event.timezone)}</time>.
+                          {' '}Replies by <time dateTime={rsvp.deadline}>{formatEventDate(rsvp.deadline, celebration.timezone)}</time>.
                         </>
                       )}
                     </p>
@@ -113,37 +187,61 @@ export default function EventPage() {
                     </MagneticLink>
                   </>
                 ) : (
-                  <p className="mt-3 text-sm leading-relaxed text-ivory/75">{rsvpClosedMessage(rsvp, event.timezone)}</p>
+                  <p className="mt-3 text-sm leading-relaxed text-ivory/75">{rsvpClosedMessage(rsvp, celebration.timezone)}</p>
                 )}
               </div>
             </div>
             </TiltCard>
             </Reveal>
+            {!several && main && (
             <Reveal delay={0.1} x={48} y={0}>
             <TiltCard className="rounded-[1.75rem]" max={5}>
             <div className="rounded-[1.75rem] border border-gold/30 bg-white p-8 shadow-soft">
               <VenueMap className="mb-6" />
               <h2 className="font-display text-xl text-navy">Getting there</h2>
               <p className="mt-2 text-sm leading-relaxed text-charcoal/80">
-                {event.venueName}
+                {main.venueName}
                 <br />
-                {event.address}
+                {main.address}
               </p>
-              <a
-                href={directions.href}
-                {...(directions.newTab ? { target: '_blank', rel: 'noopener noreferrer' } : {})}
+              <DirectionsLink
+                event={main}
                 className="mt-5 inline-flex h-11 items-center gap-2 rounded-full border border-gold/60 px-6 text-sm font-medium text-navy transition-colors hover:border-gold hover:bg-gold/10"
-              >
-                Get directions <ArrowRight className="size-4" aria-hidden />
-                {directions.newTab && <span className="sr-only">(opens in a new tab)</span>}
-              </a>
+              />
             </div>
             </TiltCard>
             </Reveal>
+            )}
+            {several && (celebration.contactEmail || celebration.contactPhone) && (
+              <Reveal delay={0.1} x={48} y={0}>
+                <div className="rounded-[1.75rem] border border-gold/30 bg-white p-8 shadow-soft">
+                  <h2 className="font-display text-xl text-navy">Questions?</h2>
+                  <p className="mt-2 text-sm leading-relaxed text-charcoal/80">
+                    {celebration.contactName ?? 'The family'}
+                    {celebration.contactEmail && (
+                      <>
+                        <br />
+                        <a className="text-emerald underline-offset-4 hover:underline" href={`mailto:${celebration.contactEmail}`}>
+                          {celebration.contactEmail}
+                        </a>
+                      </>
+                    )}
+                    {celebration.contactPhone && (
+                      <>
+                        <br />
+                        <a className="text-emerald underline-offset-4 hover:underline" href={`tel:${celebration.contactPhone.replace(/[^\d+]/g, '')}`}>
+                          {celebration.contactPhone}
+                        </a>
+                      </>
+                    )}
+                  </p>
+                </div>
+              </Reveal>
+            )}
             <Reveal delay={0.15} x={48} y={0}>
               <Link to="/programme" className="group flex items-center justify-between rounded-[1.75rem] border border-gold/30 bg-cream px-8 py-6 transition-colors hover:border-gold">
                 <span>
-                  <span className="block text-[11px] font-medium uppercase tracking-[0.3em] text-gold-rich">On the night</span>
+                  <span className="block text-[11px] font-medium uppercase tracking-[0.3em] text-gold-rich">{several ? 'At each event' : 'On the night'}</span>
                   <span className="mt-1 block font-display text-xl text-navy">View the programme</span>
                 </span>
                 <ArrowRight className="size-5 text-gold-rich transition-transform group-hover:translate-x-1" aria-hidden />

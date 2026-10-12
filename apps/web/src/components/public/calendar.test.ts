@@ -31,6 +31,21 @@ describe('buildIcs', () => {
   });
 });
 
+describe('buildIcs with several events', () => {
+  const dinner = { ...event, uid: 'event-dinner@example.com', title: 'Birthday Dinner' };
+  const brunch = { ...event, uid: 'event-brunch@example.com', title: 'Family Brunch', startsAt: '2026-11-22T11:00:00.000Z', endsAt: '2026-11-22T14:00:00.000Z' };
+  const ics = buildIcs([dinner, brunch], new Date('2026-09-01T00:00:00Z'));
+
+  it('writes one VEVENT per event in a single calendar', () => {
+    expect(ics.match(/BEGIN:VCALENDAR/g)).toHaveLength(1);
+    expect(ics.match(/BEGIN:VEVENT/g)).toHaveLength(2);
+    expect(ics).toContain('UID:event-dinner@example.com');
+    expect(ics).toContain('UID:event-brunch@example.com');
+    expect(ics).toContain('DTSTART:20261122T110000Z');
+    expect(ics.indexOf('SUMMARY:Birthday Dinner')).toBeLessThan(ics.indexOf('SUMMARY:Family Brunch'));
+  });
+});
+
 describe('calendar helpers', () => {
   it('builds a Google Calendar link', () => {
     const url = new URL(googleCalendarUrl(event));

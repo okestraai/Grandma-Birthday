@@ -47,8 +47,8 @@ export class UploadsController {
   @ApiOperation({ summary: 'Upload page configuration (limits, accepted types, whether uploads are open)' })
   async config_(@Param('token') token: string): Promise<UploadPageConfig> {
     const settings = await this.checkToken(token);
-    const [event, celebrant, storage] = await Promise.all([
-      this.settings.getEvent(),
+    const [celebration, celebrant, storage] = await Promise.all([
+      this.settings.getCelebration(),
       this.prisma.celebrant.findUnique({ where: { id: 1 } }),
       this.quota.summary(),
     ]);
@@ -56,7 +56,7 @@ export class UploadsController {
     return {
       open: closedReason === null,
       closedReason,
-      eventName: event.name,
+      eventName: celebration.name,
       celebrantName: celebrant?.fullName ?? '',
       maxPhotoBytes: settings.maxPhotoBytes,
       maxVideoBytes: settings.maxVideoBytes,

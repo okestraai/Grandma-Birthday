@@ -13,15 +13,26 @@ import HomePage from './HomePage';
 MotionGlobalConfig.skipAnimations = true;
 
 const site = {
-  event: {
+  celebration: {
     name: 'Margaret at Seventy',
     startsAt: '2026-11-21T16:00:00.000Z',
     endsAt: '2026-11-21T22:00:00.000Z',
     timezone: 'Africa/Lagos',
-    venueName: 'The Emerald Ballroom',
-    city: 'Lagos',
     rsvp: { open: true, mode: 'OPEN', deadline: null, closedReason: null },
   },
+  events: [
+    {
+      id: 'dinner',
+      slug: 'main',
+      name: 'Margaret at Seventy',
+      startsAt: '2026-11-21T16:00:00.000Z',
+      endsAt: '2026-11-21T22:00:00.000Z',
+      venueName: 'The Emerald Ballroom',
+      address: '12 Palm Grove Avenue',
+      city: 'Lagos',
+      invitedCategories: [],
+    },
+  ],
   celebrant: { fullName: 'Margaret Okonkwo', preferredName: 'Margaret', honorific: 'Dr.', age: 70, portrait: null },
   branding: { siteTitle: null, hero: null, logo: null },
   features: {},
