@@ -38,6 +38,11 @@ const SEO_TIMEOUT_MS = 1500;
 const SNAPSHOT_DIR = process.env.SNAPSHOT_DIR || join(tmpdir(), 'birthday-web-snapshot');
 // How long the proxy waits to connect to the API, and (for reads) for its first byte.
 const PROXY_CONNECT_TIMEOUT_MS = 5000;
+// A sleeping API (a free-tier instance that has spun down, say) can take well over a minute
+// to accept its first connection. Reads give up quickly because the page has a saved copy to
+// show instead; a sign-in, an RSVP or an upload has nothing to fall back on, so waiting for a
+// slow start is better than failing in five seconds and losing what the person just did.
+const PROXY_CONNECT_TIMEOUT_WRITE_MS = 90_000;
 const PROXY_READ_TIMEOUT_MS = 30_000;
 // After the API fails to answer, page requests skip the SEO lookup for this long.
 const API_DOWN_BACKOFF_MS = 10_000;
@@ -260,8 +265,9 @@ function proxy(req, res, pathOverride) {
   });
   // A host that is down may never refuse the connection, so do not wait for ever. Uploads can
   // take a long time to send, so only reads get a limit on waiting for the answer.
-  const connectTimer = setTimeout(giveUp, PROXY_CONNECT_TIMEOUT_MS);
-  const readTimer = req.method === 'GET' || req.method === 'HEAD' ? setTimeout(giveUp, PROXY_READ_TIMEOUT_MS) : undefined;
+  const isRead = req.method === 'GET' || req.method === 'HEAD';
+  const connectTimer = setTimeout(giveUp, isRead ? PROXY_CONNECT_TIMEOUT_MS : PROXY_CONNECT_TIMEOUT_WRITE_MS);
+  const readTimer = isRead ? setTimeout(giveUp, PROXY_READ_TIMEOUT_MS) : undefined;
   upstream.on('socket', (socket) => {
     if (!socket.connecting) return clearTimeout(connectTimer);
     socket.once('connect', () => clearTimeout(connectTimer));
