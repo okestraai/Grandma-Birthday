@@ -332,7 +332,7 @@ describe('Multiple events migration (e2e)', () => {
   beforeAll(async () => {
     client = new Client({ connectionString: process.env.DATABASE_URL });
     await client.connect();
-    await client.query(`CREATE SCHEMA "${schema}"; SET search_path TO "${schema}", public;`);
+    await client.query(`CREATE SCHEMA "${schema}"; SET search_path TO "${schema}";`);
   });
   afterAll(async () => {
     await client.query(`DROP SCHEMA IF EXISTS "${schema}" CASCADE`);

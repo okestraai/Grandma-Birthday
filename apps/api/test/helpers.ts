@@ -23,9 +23,12 @@ export async function createTestApp(): Promise<TestContext> {
   const moduleRef = await Test.createTestingModule({ imports: [AppModule] }).compile();
   const app = moduleRef.createNestApplication({ bodyParser: false, logger: ['error'] });
   configureApp(app, loadConfig());
-  await app.init();
+  // Listen once on IPv4 loopback. Left unstarted, supertest listens on the dual-stack wildcard
+  // for each request and then calls 127.0.0.1:<port>, which another local process may already
+  // own on macOS; those requests reach the wrong server and come back as stray 404s or hang.
+  await app.listen(0, '127.0.0.1');
   const prisma = app.get(PrismaService);
-  return { app, prisma, http: () => request.agent(app.getHttpServer()).use((req: any) => req.on('response', (res: any) => { if (res.status === 404) console.error('TEMP404', req.method, req.url, JSON.stringify(res.headers), String(res.text).slice(0, 200)); })) };
+  return { app, prisma, http: () => request.agent(app.getHttpServer()) };
 }
 
 let passwordHash: Promise<string> | null = null;
